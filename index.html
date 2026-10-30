@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101827">
+<title>Star Online | Painel Administrativo</title>
+<style>
+:root{--bg:#f3f6fb;--panel:#fff;--ink:#172235;--muted:#718096;--line:#e5eaf1;--nav:#101827;--blue:#2864dc;--gold:#d8a83e;--green:#159b69;--red:#d94b55;--orange:#d98b25;--shadow:0 8px 28px #1722350b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-columns:245px 1fr}
+.sidebar{background:var(--nav);color:#dce5f3;padding:22px 15px;display:flex;flex-direction:column;gap:22px}
+.brand{display:flex;align-items:center;gap:11px;padding:0 8px 16px;border-bottom:1px solid #ffffff18}
+.logo{width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,#f2c45c,#b98520);display:grid;place-items:center;color:#142033;font-weight:900;font-size:20px}
+.brand strong{display:block;font-size:16px;letter-spacing:.2px}.brand small{color:#9cabc0;font-size:11px}
+.nav-label{color:#8291a7;text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:1.2px;padding:0 11px}
+nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;text-align:left;padding:11px 12px;border-radius:9px;display:flex;align-items:center;gap:12px;width:100%;font-weight:600}
+.nav-btn:hover,.nav-btn.active{background:#ffffff13;color:white}.nav-btn.active{box-shadow:inset 3px 0 var(--gold)}
+.nav-icon{width:19px;text-align:center;font-size:16px}.side-note{margin-top:auto;color:#8190a5;font-size:11px;padding:12px}
+.main{min-width:0}.topbar{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 30px;position:sticky;top:0;z-index:5}
+.topbar h1{font-size:18px;margin:0}.top-right{display:flex;align-items:center;gap:12px}.pill{background:#f2f5fa;color:#5e6b7e;padding:7px 10px;border-radius:20px;font-size:12px}
+.content{padding:28px;max-width:1500px;margin:auto}.page-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:22px}.page-head h2{font-size:22px;margin:0 0 4px}.page-head p{margin:0;color:var(--muted)}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:var(--blue);color:#fff}.btn-secondary{background:#edf2fa;color:#31425c}.btn-gold{background:#fff5dc;color:#886116}.btn-danger{background:#fff0f0;color:#b7333d}.btn-small{padding:6px 9px;font-size:12px}
+.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.stat-top{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-weight:600;font-size:12px}.stat-icon{width:34px;height:34px;border-radius:10px;background:#edf3ff;display:grid;place-items:center;font-size:17px}.stat-value{font-size:27px;font-weight:800;margin:10px 0 2px;letter-spacing:-.8px}.stat-foot{font-size:11px;color:var(--muted)}
+.two-col{grid-template-columns:1.25fr .75fr}.card h3{margin:0 0 15px;font-size:15px}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px}th{text-align:left;color:#8290a2;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:800;padding:11px 10px;border-bottom:1px solid var(--line)}td{padding:12px 10px;border-bottom:1px solid #eef1f5;font-size:13px}tr:last-child td{border-bottom:0}.muted{color:var(--muted)}.badge{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:800;background:#edf1f6;color:#64748b}.badge.green{background:#e6f7ef;color:#138456}.badge.red{background:#fff0f0;color:#c23d47}.badge.orange{background:#fff5e5;color:#a96b13}.badge.blue{background:#eaf1ff;color:#285ec2}
+.empty{text-align:center;padding:30px;color:var(--muted)}.empty b{display:block;color:#44536a;margin-bottom:4px}
+.page{display:none}.page.active{display:block}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:750;color:#536176}.field input,.field select,.field textarea,.toolbar input,.toolbar select{width:100%;border:1px solid #dce3ec;border-radius:8px;padding:10px 11px;background:#fff;color:var(--ink);outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:#80a5f4;box-shadow:0 0 0 3px #2864dc15}.field textarea{min-height:75px;resize:vertical}.form-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}.toolbar input{max-width:300px}.toolbar select{max-width:190px}
+.actions{display:flex;gap:5px;white-space:nowrap}.icon-btn{border:0;border-radius:7px;padding:6px 8px;background:#f0f4fa;color:#43536a}.icon-btn:hover{background:#e2eafa}
+.modal-backdrop{display:none;position:fixed;inset:0;background:#0b1425a8;z-index:20;align-items:center;justify-content:center;padding:16px}.modal-backdrop.show{display:flex}.modal{background:#fff;width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0003}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h3{margin:0;font-size:18px}.close{border:0;background:#f1f4f8;border-radius:8px;padding:7px 10px}
+.notice{padding:13px 15px;border-radius:10px;background:#fff8e8;border:1px solid #f4e2b7;color:#78591d;font-size:12px;margin-bottom:16px}
+.quick-list{display:grid;gap:0}.quick-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.quick-row:last-child{border:0}
+.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.setting-card p{color:var(--muted);font-size:12px}.setting-card h3{margin-bottom:7px}
+.mobile-menu{display:none;border:0;background:#eef2f8;border-radius:8px;padding:8px}
+.toast{position:fixed;right:20px;bottom:20px;background:#172235;color:white;padding:12px 17px;border-radius:10px;box-shadow:var(--shadow);z-index:50;display:none}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.two-col{grid-template-columns:1fr}}
+@media(max-width:720px){.app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:15;top:0;bottom:0;left:-260px;width:245px;transition:left .2s}.sidebar.open{left:0}.mobile-menu{display:block}.topbar{padding:0 15px;height:62px}.topbar h1{font-size:15px}.content{padding:18px 13px}.page-head{align-items:flex-start;flex-direction:column}.page-head .btn{width:100%;justify-content:center}.stats{gap:10px}.card{padding:14px}.stat-value{font-size:23px}.form-grid,.settings-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.pill{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+ <div class="brand"><div class="logo">S</div><div><strong>STAR ONLINE</strong><small>Painel administrativo</small></div></div>
+ <div class="nav-label">Gestão</div>
+ <nav id="navigation">
+  <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
+  <button class="nav-btn" data-page="clientes"><span class="nav-icon">♙</span>Clientes</button>
+  <button class="nav-btn" data-page="aparelhos"><span class="nav-icon">▣</span>Aparelhos e acessos</button>
+  <button class="nav-btn" data-page="planos"><span class="nav-icon">◇</span>Planos</button>
+  <button class="nav-btn" data-page="mensalidades"><span class="nav-icon">▤</span>Mensalidades</button>
+  <button class="nav-btn" data-page="lembretes"><span class="nav-icon">◷</span>Lembretes WhatsApp</button>
+  <button class="nav-btn" data-page="relatorios"><span class="nav-icon">▥</span>Relatórios</button>
+  <div class="nav-label" style="margin-top:15px">Sistema</div>
+  <button class="nav-btn" data-page="usuarios"><span class="nav-icon">♧</span>Usuários</button>
+  <button class="nav-btn" data-page="configuracoes"><span class="nav-icon">⚙</span>Configurações</button>
+ </nav>
+ <div class="side-note">Versão inicial • Dados salvos neste navegador</div>
+</aside>
+<main class="main">
+ <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="mobile-menu" id="menuToggle">☰</button><h1 id="topTitle">Dashboard</h1></div><div class="top-right"><span class="pill">● Ambiente local de demonstração</span><strong>Administrador</strong></div></header>
+ <div class="content">
+  <section class="page active" id="page-dashboard">
+   <div class="page-head"><div><h2>Visão geral</h2><p>Acompanhe clientes, mensalidades e recebimentos.</p></div><button class="btn btn-primary" onclick="openClientModal()">＋ Novo cliente</button></div>
+   <div class="grid stats">
+    <div class="card"><div class="stat-top">Total de clientes <span class="stat-icon">♙</span></div><div class="stat-value" id="statClients">0</div><div class="stat-foot">Cadastros no sistema</div></div>
+    <div class="card"><div class="stat-top">Clientes ativos <span class="stat-icon">✓</span></div><div class="stat-value" id="statActive">0</div><div class="stat-foot">Com cadastro ativo</div></div>
+    <div class="card"><div class="stat-top">Vencidos <span class="stat-icon">!</span></div><div class="stat-value" id="statLate">0</div><div class="stat-foot">Cobranças em atraso</div></div>
+    <div class="card"><div class="stat-top">Vencem em 7 dias <span class="stat-icon">◷</span></div><div class="stat-value" id="statSoon">0</div><div class="stat-foot">Cobranças pendentes</div></div>
+    <div class="card"><div class="stat-top">Recebido no mês <span class="stat-icon">R$</span></div><div class="stat-value" id="statReceived">R$ 0</div><div class="stat-foot">Pagamentos registrados</div></div>
+    <div class="card"><div class="stat-top">A receber <span class="stat-icon">▤</span></div><div class="stat-value" id="statOpen">R$ 0</div><div class="stat-foot">Cobranças pendentes</div></div>
+    <div class="card"><div class="stat-top">Aparelhos <span class="stat-icon">▣</span></div><div class="stat-value" id="statDevices">0</div><div class="stat-foot">Dispositivos cadastrados</div></div>
+    <div class="card"><div class="stat-top">Lembretes previstos <span class="stat-icon">✉</span></div><div class="stat-value" id="statReminders">0</div><div class="stat-foot">Vencem exatamente em 2 dias</div></div>
+   </div>
+   <div class="grid two-col">
+    <div class="card"><div class="section-title"><h3>Próximos vencimentos</h3><button class="btn btn-secondary btn-small" onclick="showPage('mensalidades')">Ver todos</button></div><div id="dashboardDue" class="quick-list"></div></div>
+    <div class="card"><h3>Atalhos rápidos</h3><div class="quick-list">
+     <div class="quick-row"><span>Cadastrar novo cliente</span><button class="btn btn-secondary btn-small" onclick="openClientModal()">Abrir</button></div>
+     <div class="quick-row"><span>Registrar pagamento</span><button class="btn btn-secondary btn-small" onclick="showPage('mensalidades')">Abrir</button></div>
+     <div class="quick-row"><span>Ver fila de lembretes</span><button class="btn btn-secondary btn-small" onclick="showPage('lembretes')">Abrir</button></div>
+     <div class="quick-row"><span>Gerar relatório</span><button class="btn btn-secondary btn-small" onclick="showPage('relatorios')">Abrir</button></div>
+    </div><div class="notice" style="margin:15px 0 0">O envio automático do WhatsApp exige integração com API oficial e servidor. Esta versão organiza a fila e permite abrir uma conversa para envio manual.</div></div>
+   </div>
+  </section>
+
+  <section class="page" id="page-clientes">
+   <div class="page-head"><div><h2>Clientes</h2><p>Cadastro, consulta e histórico dos assinantes.</p></div><button class="btn btn-primary" onclick="openClientModal()">＋ Novo cliente</button></div>
+   <div class="card"><div class="toolbar"><input id="clientSearch" placeholder="Buscar por nome, telefone ou código..." oninput="renderClients()"><select id="clientStatus" onchange="renderClients()"><option value="">Todos os status</option><option>Ativo</option><option>Pendente</option><option>Inadimplente</option><option>Suspenso</option><option>Cancelado</option></select></div><div class="table-wrap"><table><thead><tr><th>Código / Cliente</th><th>WhatsApp</th><th>Plano</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody id="clientsTable"></tbody></table></div></div>
+  </section>
+
+  <section class="page" id="page-aparelhos">
+   <div class="page-head"><div><h2>Aparelhos e acessos</h2><p>MAC Address e chave de acesso vinculados aos clientes.</p></div><button class="btn btn-primary" onclick="openDeviceModal()">＋ Novo aparelho</button></div>
+   <div class="card"><div class="toolbar"><input id="deviceSearch" placeholder="Buscar cliente, MAC ou chave..." oninput="renderDevices()"></div><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Dispositivo</th><th>MAC Address</th><th>Chave de acesso</th><th>Status</th><th>Ações</th></tr></thead><tbody id="devicesTable"></tbody></table></div></div>
+  </section>
+
+  <section class="page" id="page-planos">
+   <div class="page-head"><div><h2>Planos</h2><p>Configure os planos e valores das mensalidades.</p></div><button class="btn btn-primary" onclick="openPlanModal()">＋ Novo plano</button></div>
+   <div class="card"><div class="table-wrap"><table><thead><tr><th>Plano</th><th>Descrição</th><th>Valor mensal</th><th>Status</th><th>Ações</th></tr></thead><tbody id="plansTable"></tbody></table></div></div>
+  </section>
+
+  <section class="page" id="page-mensalidades">
+   <div class="page-head"><div><h2>Mensalidades</h2><p>Controle de cobranças, pagamentos e inadimplência.</p></div><button class="btn btn-primary" onclick="openBillModal()">＋ Nova cobrança</button></div>
+   <div class="card"><div class="toolbar"><input id="billSearch" placeholder="Buscar cliente..." oninput="renderBills()"><select id="billStatus" onchange="renderBills()"><option value="">Todos os status</option><option>Pendente</option><option>Pago</option><option>Vencido</option><option>Cancelado</option></select></div><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Referência</th><th>Valor</th><th>Vencimento</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead><tbody id="billsTable"></tbody></table></div></div>
+  </section>
+
+  <section class="page" id="page-lembretes">
+   <div class="page-head"><div><h2>Lembretes WhatsApp</h2><p>Fila de cobranças que vencem em dois dias e histórico de mensagens.</p></div><button class="btn btn-gold" onclick="refreshReminders()">↻ Atualizar fila</button></div>
+   <div class="notice"><b>Integração pendente:</b> esta tela identifica os lembretes e permite abrir o WhatsApp com a mensagem preparada. O disparo automático em segundo plano será ativado quando o backend e a API oficial do WhatsApp Business estiverem configurados.</div>
+   <div class="card"><div class="section-title"><h3>Mensagens para hoje (2 dias antes do vencimento)</h3><span class="badge blue" id="reminderCount">0 pendentes</span></div><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Telefone</th><th>Vencimento</th><th>Valor</th><th>Mensagem</th><th>Ação</th></tr></thead><tbody id="remindersTable"></tbody></table></div></div>
+   <div class="card" style="margin-top:16px"><h3>Histórico de lembretes registrados</h3><div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Cliente</th><th>Vencimento</th><th>Resultado</th></tr></thead><tbody id="reminderHistory"></tbody></table></div></div>
+  </section>
+
+  <section class="page" id="page-relatorios">
+   <div class="page-head"><div><h2>Relatórios</h2><p>Resumo financeiro e situação da carteira de clientes.</p></div><button class="btn btn-secondary" onclick="exportCSV()">⇩ Exportar cobranças CSV</button></div>
+   <div class="grid stats">
+    <div class="card"><div class="stat-top">Recebido total</div><div class="stat-value" id="reportPaid">R$ 0</div></div>
+    <div class="card"><div class="stat-top">Em aberto</div><div class="stat-value" id="reportPending">R$ 0</div></div>
+    <div class="card"><div class="stat-top">Em atraso</div><div class="stat-value" id="reportOverdue">R$ 0</div></div>
+    <div class="card"><div class="stat-top">Clientes inadimplentes</div><div class="stat-value" id="reportDebtors">0</div></div>
+   </div>
+   <div class="card"><h3>Resumo por status das cobranças</h3><div id="reportBreakdown" class="quick-list"></div></div>
+  </section>
+
+  <section class="page" id="page-usuarios">
+   <div class="page-head"><div><h2>Usuários e permissões</h2><p>Perfis previstos para a versão com autenticação no servidor.</p></div></div>
+   <div class="notice">A autenticação real, recuperação de senha e controle de permissões precisam ser implementados no backend. Não utilize esta tela demonstrativa como barreira de segurança.</div>
+   <div class="grid settings-grid"><div class="card setting-card"><h3>Administrador</h3><span class="badge blue">Acesso completo</span><p>Gerencia clientes, planos, aparelhos, cobranças, relatórios e configurações.</p></div><div class="card setting-card"><h3>Financeiro</h3><span class="badge green">Acesso financeiro</span><p>Consulta clientes, registra pagamentos e acompanha relatórios financeiros.</p></div><div class="card setting-card"><h3>Atendimento</h3><span class="badge orange">Acesso operacional</span><p>Consulta cadastros e registra atendimentos conforme permissões definidas.</p></div></div>
+  </section>
+
+  <section class="page" id="page-configuracoes">
+   <div class="page-head"><div><h2>Configurações</h2><p>Preferências gerais e parâmetros da operação.</p></div><button class="btn btn-primary" onclick="saveSettings()">Salvar configurações</button></div>
+   <div class="grid settings-grid">
+    <div class="card"><h3>Dados da empresa</h3><div class="form-grid"><div class="field full"><label>Nome exibido</label><input id="companyName" value="Star Online"></div><div class="field"><label>WhatsApp de atendimento</label><input id="companyPhone" placeholder="5521999999999"></div><div class="field"><label>Fuso horário</label><input value="America/Sao_Paulo" disabled></div></div></div>
+    <div class="card"><h3>Regras de lembrete</h3><div class="field"><label>Enviar lembrete quantos dias antes?</label><select id="reminderDays"><option value="2">2 dias antes</option><option value="3">3 dias antes</option><option value="5">5 dias antes</option></select></div><div class="field" style="margin-top:12px"><label>Horário preferencial (referência)</label><input id="reminderTime" type="time" value="10:00"></div><p class="muted">O agendamento automático depende do servidor.</p></div>
+    <div class="card"><h3>Armazenamento local</h3><p class="muted">Os dados desta demonstração ficam salvos no armazenamento deste navegador e aparelho.</p><button class="btn btn-secondary" onclick="backupData()">⇩ Baixar backup JSON</button><button class="btn btn-danger" style="margin-left:6px" onclick="clearData()">Apagar dados locais</button></div>
+    <div class="card"><h3>Integrações</h3><span class="badge orange">Não configuradas</span><p>WhatsApp Business API, banco de dados em nuvem, autenticação e serviço de agendamento.</p><p class="muted">Nunca coloque tokens ou senhas de API diretamente neste arquivo HTML.</p></div>
+   </div>
+  </section>
+ </div>
+</main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Cadastro</h3><button class="close" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const todayISO=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+const fmtDate=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+const money=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9).toUpperCase();
+let data=loadData();
+function loadData(){try{return JSON.parse(localStorage.getItem('starOnlineData'))||{clients:[],devices:[],plans:[],bills:[],history:[],settings:{}}}catch(e){return{clients:[],devices:[],plans:[],bills:[],history:[],settings:{}}}}
+function save(){localStorage.setItem('starOnlineData',JSON.stringify(data));renderAll()}
+function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2600)}
+function statusBadge(s){let c=s==='Ativo'||s==='Pago'?'green':s==='Vencido'||s==='Inadimplente'?'red':s==='Pendente'?'orange':s==='Suspenso'?'orange':'blue';return `<span class="badge ${c}">${esc(s)}</span>`}
+function clientName(id){return data.clients.find(c=>c.id===id)?.name||'Cliente removido'}
+function showPage(name){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$('page-'+name).classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));$('topTitle').textContent=document.querySelector(`[data-page="${name}"]`).textContent.trim();$('sidebar').classList.remove('open');renderAll()}
+$('navigation').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b)showPage(b.dataset.page)});
+$('menuToggle').onclick=()=>$('sidebar').classList.toggle('open');
+function openModal(title,body){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modalBackdrop').classList.add('show')}
+function closeModal(){$('modalBackdrop').classList.remove('show')}
+function openClientModal(id){const c=data.clients.find(x=>x.id===id)||{};openModal(id?'Editar cliente':'Novo cliente',`
+<form id="clientForm" class="form-grid">
+<input type="hidden" name="id" value="${esc(c.id||'')}">
+<div class="field"><label>Nome completo *</label><input name="name" required value="${esc(c.name||'')}"></div>
+<div class="field"><label>Telefone / WhatsApp *</label><input name="phone" required placeholder="21999999999" value="${esc(c.phone||'')}"></div>
+<div class="field"><label>E-mail</label><input name="email" type="email" value="${esc(c.email||'')}"></div>
+<div class="field"><label>CPF (opcional)</label><input name="cpf" value="${esc(c.cpf||'')}"></div>
+<div class="field"><label>Plano</label><select name="planId">${data.plans.map(p=>`<option value="${p.id}" ${c.planId===p.id?'selected':''}>${esc(p.name)} — ${money(p.price)}</option>`).join('')}</select></div>
+<div class="field"><label>Valor mensal (R$)</label><input name="price" type="number" step="0.01" min="0" value="${c.price??''}"></div>
+<div class="field"><label>Data do cadastro</label><input name="created" type="date" value="${c.created||todayISO()}"></div>
+<div class="field"><label>Próximo vencimento *</label><input name="due" type="date" required value="${c.due||addDays(todayISO(),30)}"></div>
+<div class="field"><label>Status</label><select name="status">${['Ativo','Pendente','Inadimplente','Suspenso','Cancelado'].map(s=>`<option ${c.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+<div class="field"><label>Receber lembrete WhatsApp?</label><select name="remind"><option value="yes" ${c.remind!=='no'?'selected':''}>Sim</option><option value="no" ${c.remind==='no'?'selected':''}>Não</option></select></div>
+<div class="field full"><label>Observações</label><textarea name="notes">${esc(c.notes||'')}</textarea></div>
+<div class="field full"><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary">Salvar cliente</button></div></div></form>`);
+$('clientForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id');const obj={id:id||uid(),name:f.get('name').trim(),phone:f.get('phone').replace(/\D/g,''),email:f.get('email'),cpf:f.get('cpf'),planId:f.get('planId'),price:Number(f.get('price')||data.plans.find(p=>p.id===f.get('planId'))?.price||0),created:f.get('created'),due:f.get('due'),status:f.get('status'),remind:f.get('remind'),notes:f.get('notes')};if(id)data.clients=data.clients.map(x=>x.id===id?obj:x);else{data.clients.push(obj);data.bills.push({id:uid(),clientId:obj.id,ref:new Date().toLocaleDateString('pt-BR',{month:'2-digit',year:'numeric'}),amount:obj.price,due:obj.due,status:'Pendente',paidAt:'',method:''})}closeModal();save();toast(id?'Cliente atualizado':'Cliente cadastrado')}}
+function openDeviceModal(id){const d=data.devices.find(x=>x.id===id)||{};openModal(id?'Editar aparelho':'Novo aparelho',`<form id="deviceForm" class="form-grid"><input type="hidden" name="id" value="${esc(d.id||'')}"><div class="field"><label>Cliente *</label><select name="clientId" required>${data.clients.map(c=>`<option value="${c.id}" ${d.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>Identificação do aparelho *</label><input name="name" required placeholder="Ex.: TV da sala" value="${esc(d.name||'')}"></div><div class="field"><label>Tipo</label><select name="type">${['Smart TV','TV Box','Celular','Tablet','Computador','Outro'].map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select></div><div class="field"><label>Sistema operacional</label><input name="os" placeholder="Android, Windows..." value="${esc(d.os||'')}"></div><div class="field"><label>MAC Address</label><input name="mac" placeholder="AA:BB:CC:DD:EE:FF" value="${esc(d.mac||'')}"></div><div class="field"><label>Chave de acesso</label><input name="key" value="${esc(d.key||'')}" autocomplete="off"></div><div class="field"><label>Data de ativação</label><input name="activation" type="date" value="${d.activation||todayISO()}"></div><div class="field"><label>Status</label><select name="status"><option>Ativo</option><option ${d.status==='Inativo'?'selected':''}>Inativo</option><option ${d.status==='Bloqueado'?'selected':''}>Bloqueado</option></select></div><div class="field full"><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary">Salvar aparelho</button></div></div></form>`);
+$('deviceForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id'),obj={id:id||uid(),clientId:f.get('clientId'),name:f.get('name'),type:f.get('type'),os:f.get('os'),mac:f.get('mac'),key:f.get('key'),activation:f.get('activation'),status:f.get('status')};if(obj.mac&&!/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(obj.mac)){toast('Formato de MAC inválido');return}if(id)data.devices=data.devices.map(x=>x.id===id?obj:x);else data.devices.push(obj);closeModal();save();toast('Aparelho salvo')}}
+function openPlanModal(id){const p=data.plans.find(x=>x.id===id)||{};openModal(id?'Editar plano':'Novo plano',`<form id="planForm" class="form-grid"><input type="hidden" name="id" value="${esc(p.id||'')}"><div class="field"><label>Nome do plano *</label><input name="name" required value="${esc(p.name||'')}"></div><div class="field"><label>Valor mensal (R$) *</label><input name="price" type="number" min="0" step=".01" required value="${p.price??''}"></div><div class="field full"><label>Descrição</label><textarea name="desc">${esc(p.desc||'')}</textarea></div><div class="field full"><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary">Salvar plano</button></div></div></form>`);
+$('planForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id'),obj={id:id||uid(),name:f.get('name'),price:Number(f.get('price')),desc:f.get('desc')};if(id)data.plans=data.plans.map(x=>x.id===id?obj:x);else data.plans.push(obj);closeModal();save();toast('Plano salvo')}}
+function openBillModal(){openModal('Nova cobrança',`<form id="billForm" class="form-grid"><div class="field"><label>Cliente *</label><select name="clientId" required>${data.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>Referência</label><input name="ref" placeholder="11/2026"></div><div class="field"><label>Valor (R$) *</label><input name="amount" type="number" min="0" step=".01" required></div><div class="field"><label>Vencimento *</label><input name="due" type="date" required value="${todayISO()}"></div><div class="field full"><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary">Criar cobrança</button></div></div></form>`);
+$('billForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);data.bills.push({id:uid(),clientId:f.get('clientId'),ref:f.get('ref'),amount:Number(f.get('amount')),due:f.get('due'),status:'Pendente',paidAt:'',method:''});closeModal();save();toast('Cobrança criada')}}
+function markPaid(id){const b=data.bills.find(x=>x.id===id);if(!b)return;if(!confirm('Confirmar o recebimento desta cobrança?'))return;b.status='Pago';b.paidAt=todayISO();const c=data.clients.find(x=>x.id===b.clientId);if(c){c.due=addDays(b.due,30);if(c.status==='Inadimplente')c.status='Ativo'}data.history.unshift({id:uid(),billId:id,clientId:b.clientId,due:b.due,date:new Date().toLocaleString('pt-BR'),result:'Pagamento registrado'});save();toast('Pagamento registrado')}
+function removeItem(type,id){if(!confirm('Deseja realmente excluir este registro?'))return;if(type==='client'){data.clients=data.clients.filter(x=>x.id!==id);data.devices=data.devices.filter(x=>x.clientId!==id);data.bills=data.bills.filter(x=>x.clientId!==id)}if(type==='device')data.devices=data.devices.filter(x=>x.id!==id);if(type==='plan')data.plans=data.plans.filter(x=>x.id!==id);if(type==='bill')data.bills=data.bills.filter(x=>x.id!==id);save()}
+function renderClients(){const q=($('clientSearch')?.value||'').toLowerCase(),st=$('clientStatus')?.value||'';const rows=data.clients.filter(c=>(c.name+' '+c.phone+' '+c.id).toLowerCase().includes(q)&&(!st||c.status===st));$('clientsTable').innerHTML=rows.length?rows.map(c=>`<tr><td><b>${esc(c.name)}</b><div class="muted">#${c.id}</div></td><td>${esc(c.phone)}</td><td>${esc(data.plans.find(p=>p.id===c.planId)?.name||'—')}</td><td>${fmtDate(c.due)}</td><td>${statusBadge(c.status)}</td><td><div class="actions"><button class="icon-btn" onclick="openClientModal('${c.id}')">Editar</button><button class="icon-btn" onclick="removeItem('client','${c.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Nenhum cliente cadastrado.</td></tr>'}
+function renderDevices(){const q=($('deviceSearch')?.value||'').toLowerCase();const rows=data.devices.filter(d=>(clientName(d.clientId)+' '+d.mac+' '+d.key+' '+d.name).toLowerCase().includes(q));$('devicesTable').innerHTML=rows.length?rows.map(d=>`<tr><td>${esc(clientName(d.clientId))}</td><td><b>${esc(d.name)}</b><div class="muted">${esc(d.type)} • ${esc(d.os)}</div></td><td>${esc(d.mac||'—')}</td><td><span title="Chave protegida">${d.key?'••••••••':'—'}</span></td><td>${statusBadge(d.status)}</td><td><div class="actions"><button class="icon-btn" onclick="openDeviceModal('${d.id}')">Editar</button><button class="icon-btn" onclick="removeItem('device','${d.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Nenhum aparelho cadastrado.</td></tr>'}
+function renderPlans(){$('plansTable').innerHTML=data.plans.length?data.plans.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.desc||'—')}</td><td>${money(p.price)}</td><td>${statusBadge('Ativo')}</td><td><div class="actions"><button class="icon-btn" onclick="openPlanModal('${p.id}')">Editar</button><button class="icon-btn" onclick="removeItem('plan','${p.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Nenhum plano cadastrado. Crie um plano para começar.</td></tr>'}
+function billStatus(b){if(b.status==='Pendente'&&b.due<todayISO())return'Vencido';return b.status}
+function renderBills(){const q=($('billSearch')?.value||'').toLowerCase(),st=$('billStatus')?.value||'';const rows=data.bills.filter(b=>clientName(b.clientId).toLowerCase().includes(q)&&(!st||billStatus(b)===st));$('billsTable').innerHTML=rows.length?rows.sort((a,b)=>a.due.localeCompare(b.due)).map(b=>`<tr><td>${esc(clientName(b.clientId))}</td><td>${esc(b.ref||'—')}</td><td><b>${money(b.amount)}</b></td><td>${fmtDate(b.due)}</td><td>${fmtDate(b.paidAt)}</td><td>${statusBadge(billStatus(b))}</td><td><div class="actions">${b.status!=='Pago'?`<button class="icon-btn" onclick="markPaid('${b.id}')">Receber</button>`:''}<button class="icon-btn" onclick="removeItem('bill','${b.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Nenhuma cobrança encontrada.</td></tr>'}
+function reminderItems(){const days=Number(data.settings.reminderDays||2),target=addDays(todayISO(),days);return data.bills.filter(b=>b.status==='Pendente'&&b.due===target&&data.clients.find(c=>c.id===b.clientId)?.remind!=='no')}
+function reminderMessage(b){const c=data.clients.find(x=>x.id===b.clientId);return `Olá, ${c?.name||'cliente'}! Tudo bem? Passando para lembrar que sua mensalidade no valor de ${money(b.amount)} vence em ${fmtDate(b.due)}. Se já realizou o pagamento, por favor desconsidere esta mensagem. Equipe ${data.settings.companyName||'Star Online'}.`}
+function sendManual(id){const b=data.bills.find(x=>x.id===id),c=data.clients.find(x=>x.id===b?.clientId);if(!b||!c)return;const phone=c.phone.replace(/\D/g,'');if(phone.length<10){toast('Telefone do cliente inválido');return}data.history.unshift({id:uid(),billId:id,clientId:c.id,due:b.due,date:new Date().toLocaleString('pt-BR'),result:'WhatsApp aberto para envio manual'});save();window.open('https://wa.me/55'+phone+'?text='+encodeURIComponent(reminderMessage(b)),'_blank');toast('Conversa aberta; confirme o envio no WhatsApp')}
+function refreshReminders(){renderReminders();toast('Fila de lembretes atualizada')}
+function renderReminders(){const rows=reminderItems();$('reminderCount').textContent=rows.length+' pendentes';$('remindersTable').innerHTML=rows.length?rows.map(b=>{const c=data.clients.find(x=>x.id===b.clientId);return`<tr><td><b>${esc(c?.name)}</b></td><td>${esc(c?.phone)}</td><td>${fmtDate(b.due)}</td><td>${money(b.amount)}</td><td><button class="icon-btn" onclick="previewMessage('${b.id}')">Visualizar</button></td><td><button class="btn btn-primary btn-small" onclick="sendManual('${b.id}')">Abrir WhatsApp</button></td></tr>`}).join(''):'<tr><td colspan="6" class="empty">Nenhuma cobrança pendente com vencimento dentro de dois dias.</td></tr>';$('reminderHistory').innerHTML=data.history.length?data.history.slice(0,30).map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(clientName(h.clientId))}</td><td>${fmtDate(h.due)}</td><td>${statusBadge(h.result)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">Nenhum registro de lembrete.</td></tr>'}
+function previewMessage(id){const b=data.bills.find(x=>x.id===id);alert(reminderMessage(b))}
+function renderDashboard(){const pending=data.bills.filter(b=>b.status==='Pendente'),late=pending.filter(b=>b.due<todayISO()),soon=pending.filter(b=>b.due>=todayISO()&&b.due<=addDays(todayISO(),7)),month=todayISO().slice(0,7),received=data.bills.filter(b=>b.status==='Pago'&&b.paidAt?.slice(0,7)===month).reduce((s,b)=>s+b.amount,0),open=pending.reduce((s,b)=>s+b.amount,0);$('statClients').textContent=data.clients.length;$('statActive').textContent=data.clients.filter(c=>c.status==='Ativo').length;$('statLate').textContent=late.length;$('statSoon').textContent=soon.length;$('statReceived').textContent=money(received);$('statOpen').textContent=money(open);$('statDevices').textContent=data.devices.length;$('statReminders').textContent=reminderItems().length;const due=pending.sort((a,b)=>a.due.localeCompare(b.due)).slice(0,6);$('dashboardDue').innerHTML=due.length?due.map(b=>`<div class="quick-row"><div><b>${esc(clientName(b.clientId))}</b><div class="muted">${fmtDate(b.due)} • ${money(b.amount)}</div></div>${statusBadge(billStatus(b))}</div>`).join(''):'<div class="empty">Nenhum vencimento pendente.</div>'}
+function renderReports(){const paid=data.bills.filter(b=>b.status==='Pago').reduce((s,b)=>s+b.amount,0),pending=data.bills.filter(b=>b.status==='Pendente').reduce((s,b)=>s+b.amount,0),over=data.bills.filter(b=>billStatus(b)==='Vencido').reduce((s,b)=>s+b.amount,0),debtors=new Set(data.bills.filter(b=>billStatus(b)==='Vencido').map(b=>b.clientId)).size;$('reportPaid').textContent=money(paid);$('reportPending').textContent=money(pending);$('reportOverdue').textContent=money(over);$('reportDebtors').textContent=debtors;const statuses=['Pago','Pendente','Vencido','Cancelado'];$('reportBreakdown').innerHTML=statuses.map(s=>`<div class="quick-row"><span>${s}</span><b>${data.bills.filter(b=>billStatus(b)===s).length} cobrança(s)</b></div>`).join('')}
+function renderAll(){renderDashboard();renderClients();renderDevices();renderPlans();renderBills();renderReminders();renderReports()}
+function saveSettings(){data.settings={companyName:$('companyName').value,companyPhone:$('companyPhone').value,reminderDays:$('reminderDays').value,reminderTime:$('reminderTime').value};save();toast('Configurações salvas')}
+function backupData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='star-online-backup.json';a.click();URL.revokeObjectURL(a.href)}
+function clearData(){if(!confirm('Isso apagará todos os dados salvos neste navegador. Deseja continuar?'))return;localStorage.removeItem('starOnlineData');data=loadData();save();toast('Dados locais apagados')}
+function exportCSV(){const rows=[['Cliente','Referencia','Valor','Vencimento','Status','Data pagamento'],...data.bills.map(b=>[clientName(b.clientId),b.ref,b.amount,b.due,billStatus(b),b.paidAt])];const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relatorio-star-online.csv';a.click();URL.revokeObjectURL(a.href)}
+// Configurações salvas
+if(data.settings.companyName)$('companyName').value=data.settings.companyName;if(data.settings.companyPhone)$('companyPhone').value=data.settings.companyPhone;if(data.settings.reminderDays)$('reminderDays').value=data.settings.reminderDays;if(data.settings.reminderTime)$('reminderTime').value=data.settings.reminderTime;
+// Planos de exemplo somente no primeiro acesso
+if(!localStorage.getItem('starOnlineData')){data.plans=[{id:uid(),name:'Star Top',price:29.90,desc:'Plano principal'},{id:uid(),name:'Premium',price:40,desc:'Plano premium'}];save()}
+renderAll();
+</script>
+</body>
+</html>
