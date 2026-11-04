@@ -146,13 +146,44 @@ nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;
 <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Cadastro</h3><button class="close" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
 <div class="toast" id="toast"></div>
 
-<div id="loginScreen" style="position:fixed;inset:0;z-index:100;background:#101827;display:flex;align-items:center;justify-content:center;padding:18px">
- <form id="loginForm" style="background:#fff;width:min(420px,100%);padding:28px;border-radius:16px;box-shadow:0 20px 70px #0005">
-  <div style="font-size:22px;font-weight:900;color:#172235;margin-bottom:5px">STAR ONLINE</div><p style="color:#718096;margin:0 0 22px">Acesso seguro ao painel administrativo</p>
-  <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">E-mail</label><input name="email" type="email" required autocomplete="username" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
-  <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Senha</label><input name="password" type="password" required autocomplete="current-password" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
-  <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px">Entrar</button><p id="loginError" style="color:#c23d47;font-size:12px;margin:12px 0 0"></p>
- </form>
+<div id="loginScreen" style="position:fixed;inset:0;z-index:100;background:#101827;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto">
+ <div style="background:#fff;width:min(440px,100%);padding:28px;border-radius:16px;box-shadow:0 20px 70px #0005;margin:auto">
+  <div style="font-size:22px;font-weight:900;color:#172235;margin-bottom:5px">STAR ONLINE</div>
+  <p style="color:#718096;margin:0 0 22px">Acesso seguro ao painel administrativo</p>
+
+  <form id="loginForm">
+   <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">E-mail</label>
+   <input name="email" type="email" required autocomplete="username" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+   <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Senha</label>
+   <input name="password" type="password" required autocomplete="current-password" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+   <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px">Entrar</button>
+   <p id="loginError" style="color:#c23d47;font-size:12px;margin:12px 0 0"></p>
+  </form>
+
+  <div id="registerArea" style="display:none">
+   <div style="font-size:17px;font-weight:850;margin:8px 0 4px;color:#172235">Criar minha conta</div>
+   <p style="color:#718096;font-size:12px;margin:0 0 15px">Comece com o plano Start e 15 dias de teste.</p>
+   <form id="registerForm">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Nome da empresa *</label>
+    <input name="nome_fantasia" required maxlength="150" autocomplete="organization" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Nome do proprietário *</label>
+    <input name="nome_proprietario" required maxlength="150" autocomplete="name" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">E-mail *</label>
+    <input name="email" type="email" required maxlength="254" autocomplete="email" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Telefone / WhatsApp</label>
+    <input name="telefone" type="tel" autocomplete="tel" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Senha (mínimo 8 caracteres) *</label>
+    <input name="password" type="password" required minlength="8" maxlength="72" autocomplete="new-password" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Confirmar senha *</label>
+    <input name="confirm_password" type="password" required minlength="8" maxlength="72" autocomplete="new-password" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+    <button id="registerSubmit" class="btn btn-primary" type="submit" style="width:100%;justify-content:center;margin-top:18px">Criar minha conta</button>
+    <p id="registerMessage" role="status" style="font-size:12px;margin:12px 0 0"></p>
+   </form>
+  </div>
+
+  <button id="showRegister" type="button" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:12px">Criar minha conta</button>
+  <button id="showLogin" type="button" class="btn btn-secondary" style="display:none;width:100%;justify-content:center;margin-top:12px">Voltar ao login</button>
+ </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -252,7 +283,105 @@ function exportCSV(){const rows=[['Cliente','Referencia','Valor','Vencimento','S
 // Autenticação e carregamento dos dados na nuvem
 async function enterPanel(session){currentUser=session.user;$('loginScreen').style.display='none';document.querySelector('.app').style.display='grid';$('loginError').textContent='';$('topTitle').textContent='Dashboard';document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';$('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};try{await loadCloud();const settings=JSON.parse(localStorage.getItem('starOnlineSettings')||'{}');data.settings=settings;applySettings();renderAll()}catch(e){console.error(e);$('loginError').textContent='Erro ao carregar dados: '+(e.message||'verifique as tabelas e permissões');$('loginScreen').style.display='flex';document.querySelector('.app').style.display='none'}}
 function applySettings(){if(data.settings.companyName)$('companyName').value=data.settings.companyName;if(data.settings.companyPhone)$('companyPhone').value=data.settings.companyPhone;if(data.settings.reminderDays)$('reminderDays').value=data.settings.reminderDays;if(data.settings.reminderTime)$('reminderTime').value=data.settings.reminderTime}
-$('loginForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$('loginError').textContent='Conectando...';const {data:auth,error}=await sb.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error){$('loginError').textContent='E-mail ou senha incorretos. '+error.message;return}await enterPanel(auth.session)};
+$('showRegister').onclick=()=>{
+ $('loginForm').style.display='none';
+ $('registerArea').style.display='block';
+ $('showRegister').style.display='none';
+ $('showLogin').style.display='flex';
+ $('loginError').textContent='';
+ $('registerMessage').textContent='';
+};
+$('showLogin').onclick=()=>{
+ $('registerArea').style.display='none';
+ $('loginForm').style.display='block';
+ $('showLogin').style.display='none';
+ $('showRegister').style.display='flex';
+ $('registerMessage').textContent='';
+};
+
+$('loginForm').onsubmit=async e=>{
+ e.preventDefault();
+ const f=new FormData(e.target);
+ $('loginError').textContent='Conectando...';
+ const {data:auth,error}=await sb.auth.signInWithPassword({
+  email:f.get('email'),
+  password:f.get('password')
+ });
+ if(error){
+  $('loginError').textContent='E-mail ou senha incorretos. '+error.message;
+  return;
+ }
+ await enterPanel(auth.session);
+};
+
+$('registerForm').onsubmit=async e=>{
+ e.preventDefault();
+ const form=e.target;
+ const f=new FormData(form);
+ const senha=String(f.get('password')||'');
+ const confirmar=String(f.get('confirm_password')||'');
+ const msg=$('registerMessage');
+ const botao=$('registerSubmit');
+
+ if(senha.length<8){
+  msg.style.color='#c23d47';
+  msg.textContent='A senha precisa ter pelo menos 8 caracteres.';
+  return;
+ }
+ if(senha!==confirmar){
+  msg.style.color='#c23d47';
+  msg.textContent='As senhas não coincidem.';
+  return;
+ }
+
+ botao.disabled=true;
+ botao.textContent='Criando sua conta...';
+ msg.style.color='#536176';
+ msg.textContent='Enviando cadastro...';
+
+ try{
+  const {data:resultado,error}=await sb.functions.invoke('dynamic-worker',{
+   body:{
+    nome_fantasia:String(f.get('nome_fantasia')||'').trim(),
+    nome_proprietario:String(f.get('nome_proprietario')||'').trim(),
+    email:String(f.get('email')||'').trim().toLowerCase(),
+    telefone:String(f.get('telefone')||'').trim(),
+    password:senha
+   }
+  });
+
+  if(error){
+   let detalhe='';
+   try{
+    const corpo=error.context && await error.context.json();
+    detalhe=corpo?.erro||corpo?.message||'';
+   }catch(_){}
+   throw new Error(detalhe||error.message||'Falha ao enviar o cadastro.');
+  }
+
+  if(!resultado?.sucesso){
+   throw new Error(resultado?.erro||'Não foi possível concluir o cadastro.');
+  }
+
+  form.reset();
+  $('registerArea').style.display='none';
+  $('loginForm').style.display='block';
+  $('showLogin').style.display='none';
+  $('showRegister').style.display='flex';
+  $('loginError').style.color='#159b69';
+  $('loginError').textContent='Cadastro concluído! Entre com seu e-mail e senha.';
+  $('loginForm').elements.email.value=String(f.get('email')||'').trim().toLowerCase();
+  msg.textContent='';
+ }catch(err){
+  console.error('Erro no cadastro:',err);
+  msg.style.color='#c23d47';
+  msg.textContent=err.message||'Não foi possível concluir o cadastro. Tente novamente.';
+ }finally{
+  botao.disabled=false;
+  botao.textContent='Criar minha conta';
+ }
+};
+
 document.querySelector('.app').style.display='none';
 sb.auth.getSession().then(({data:sessionData})=>{if(sessionData.session)enterPanel(sessionData.session)});
 sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){document.querySelector('.app').style.display='none';$('loginScreen').style.display='flex'}});
