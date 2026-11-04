@@ -398,16 +398,29 @@ $('loginForm').onsubmit=async e=>{
  e.preventDefault();
  const f=new FormData(e.target);
  $('loginError').textContent='Conectando...';
- const {data:auth,error}=await sb.auth.signInWithPassword({
+ 
+const {data:auth,error}=await sb.auth.signInWithPassword({
   email:f.get('email'),
   password:f.get('password')
- });
- if(error){
+});
+
+if(error){
   $('loginError').textContent='E-mail ou senha incorretos. '+error.message;
   return;
- }
- await enterPanel(auth.session);
-};
+}
+
+// Verificar se o usuário é administrador SaaS
+const {data:isAdmin,error:adminError}=await sb.rpc('eh_admin_saas');
+
+if(adminError){
+  console.error('Erro ao verificar administrador:', adminError);
+}
+
+// Guardar autorização administrativa na sessão da aplicação
+window.isAdminSaas = !adminError && isAdmin === true;
+
+// Continuar com o fluxo normal do painel
+await enterPanel(auth.session);
 
 $('registerForm').onsubmit=async e=>{
  e.preventDefault();
