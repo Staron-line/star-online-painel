@@ -58,7 +58,7 @@ nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;
   <button class="nav-btn" data-page="usuarios"><span class="nav-icon">♧</span>Usuários</button>
   <button class="nav-btn" data-page="configuracoes"><span class="nav-icon">⚙</span>Configurações</button>
  </nav>
- <div class="side-note">Versão inicial • Dados salvos neste navegador</div>
+ <div class="side-note">Dados sincronizados na nuvem</div>
 </aside>
 <main class="main">
  <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="mobile-menu" id="menuToggle">☰</button><h1 id="topTitle">Dashboard</h1></div><div class="top-right"><span class="pill">● Ambiente local de demonstração</span><strong>Administrador</strong></div></header>
@@ -146,17 +146,59 @@ nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;
 <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-head"><h3 id="modalTitle">Cadastro</h3><button class="close" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div></div>
 <div class="toast" id="toast"></div>
 
+<div id="loginScreen" style="position:fixed;inset:0;z-index:100;background:#101827;display:flex;align-items:center;justify-content:center;padding:18px">
+ <form id="loginForm" style="background:#fff;width:min(420px,100%);padding:28px;border-radius:16px;box-shadow:0 20px 70px #0005">
+  <div style="font-size:22px;font-weight:900;color:#172235;margin-bottom:5px">STAR ONLINE</div><p style="color:#718096;margin:0 0 22px">Acesso seguro ao painel administrativo</p>
+  <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">E-mail</label><input name="email" type="email" required autocomplete="username" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+  <label style="display:block;font-size:12px;font-weight:750;margin:12px 0 6px">Senha</label><input name="password" type="password" required autocomplete="current-password" style="width:100%;padding:12px;border:1px solid #dce3ec;border-radius:8px">
+  <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px">Entrar</button><p id="loginError" style="color:#c23d47;font-size:12px;margin:12px 0 0"></p>
+ </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL='https://hwvrxzgwrimioextcqtl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ZE2MMH6V7N0Bc2oaMNZ7Eg_dFAd6FE7';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=id=>document.getElementById(id);
 const todayISO=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const fmtDate=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'—';
 const money=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const uid=()=>Math.random().toString(36).slice(2,9).toUpperCase();
-let data=loadData();
-function loadData(){try{return JSON.parse(localStorage.getItem('starOnlineData'))||{clients:[],devices:[],plans:[],bills:[],history:[],settings:{}}}catch(e){return{clients:[],devices:[],plans:[],bills:[],history:[],settings:{}}}}
-function save(){localStorage.setItem('starOnlineData',JSON.stringify(data));renderAll()}
+const uid=()=>crypto.randomUUID();
+const emptyData=()=>({clients:[],devices:[],plans:[],bills:[],history:[],settings:{}});
+let data=emptyData(), previous={clients:[],devices:[],plans:[],bills:[]}, currentUser=null;
+function loadData(){try{return JSON.parse(localStorage.getItem('starOnlineData'))||emptyData()}catch(e){return emptyData()}}
+const toDbStatus=(v,map={})=>map[v]||String(v||'').toLowerCase();
+const fromDbStatus=(v,map={})=>map[v]||String(v||'').replace(/^./,c=>c.toUpperCase());
+async function fetchRows(table){const {data,error}=await sb.from(table).select('*');if(error)throw error;return data||[]}
+async function loadCloud(){
+ const [pl,cl,dev,bi,pay,rem]=await Promise.all(['planos','clientes','aparelhos','mensalidades','pagamentos','lembretes'].map(fetchRows));
+ data.plans=pl.map(x=>({id:x.id,name:x.nome,price:Number(x.valor),desc:x.descricao||''}));
+ data.clients=cl.map(x=>({id:x.id,name:x.nome,phone:x.telefone,email:x.email||'',cpf:x.cpf||'',planId:x.plano_id||'',price:Number(x.valor_mensalidade),created:x.data_cadastro||todayISO(),due:x.proximo_vencimento||'',status:fromDbStatus(x.status),remind:'yes',notes:x.observacoes||''}));
+ data.devices=dev.map(x=>({id:x.id,clientId:x.cliente_id,name:x.tipo_dispositivo||'Aparelho',type:x.tipo_dispositivo||'',os:x.sistema_operacional||'',mac:x.mac_address||'',key:x.chave_acesso||'',activation:x.data_ativacao||'',status:fromDbStatus(x.status,{bloqueado:'Bloqueado'})}));
+ data.bills=bi.map(x=>{const payment=pay.find(y=>y.mensalidade_id===x.id);return{id:x.id,clientId:x.cliente_id,ref:x.competencia||'',amount:Number(x.valor),due:x.data_vencimento,status:fromDbStatus(x.status,{atrasado:'Vencido'}),paidAt:payment?.data_pagamento?.slice(0,10)||'',method:payment?.forma_pagamento||'',paymentId:payment?.id||''}});
+ data.history=rem.map(x=>({id:x.id,clientId:x.cliente_id,due:x.data_programada?.slice(0,10)||'',date:x.data_envio?new Date(x.data_envio).toLocaleString('pt-BR'):'',result:x.status==='enviado'?'WhatsApp enviado':'Lembrete registrado'}));
+ previous={clients:data.clients.map(x=>x.id),devices:data.devices.map(x=>x.id),plans:data.plans.map(x=>x.id),bills:data.bills.map(x=>x.id),history:data.history.map(x=>x.id)};
+ if(!data.plans.length){const defaults=[{nome:'Star Top',descricao:'Plano principal',valor:29.90,ativo:true},{nome:'Premium',descricao:'Plano premium',valor:40,ativo:true}];const {data:inserted,error}=await sb.from('planos').insert(defaults).select();if(error)throw error;data.plans=inserted.map(x=>({id:x.id,name:x.nome,price:Number(x.valor),desc:x.descricao||''}));previous.plans=data.plans.map(x=>x.id)}
+}
+async function save(){
+ try{
+  const plans=data.plans.map(x=>({id:x.id,nome:x.name,descricao:x.desc||'',valor:Number(x.price)||0,ativo:true}));
+  const clients=data.clients.map(x=>({id:x.id,nome:x.name,telefone:x.phone,email:x.email||null,cpf:x.cpf||null,plano_id:x.planId||null,valor_mensalidade:Number(x.price)||0,data_cadastro:x.created||todayISO(),proximo_vencimento:x.due||null,vencimento_dia:x.due?Number(x.due.slice(8,10)):null,status:toDbStatus(x.status),observacoes:x.notes||null}));
+  const devices=data.devices.map(x=>({id:x.id,cliente_id:x.clientId,tipo_dispositivo:x.name||x.type,sistema_operacional:x.os||null,mac_address:x.mac||null,chave_acesso:x.key||null,data_ativacao:x.activation||null,status:toDbStatus(x.status)}));
+  const bills=data.bills.map(x=>({id:x.id,cliente_id:x.clientId,valor:Number(x.amount)||0,data_vencimento:x.due,competencia:x.ref||null,status:toDbStatus(x.status,{Vencido:'atrasado'})}));
+  for(const [table,rows] of [['planos',plans],['clientes',clients],['aparelhos',devices],['mensalidades',bills]]) if(rows.length){const {error}=await sb.from(table).upsert(rows);if(error)throw error}
+  for(const [table,key] of [['aparelhos','devices'],['mensalidades','bills'],['clientes','clients'],['planos','plans']]){const now=data[key].map(x=>x.id),gone=previous[key].filter(id=>!now.includes(id));if(gone.length){const {error}=await sb.from(table).delete().in('id',gone);if(error)throw error}}
+  const newHistory=data.history.filter(h=>!previous.history.includes(h.id));
+  for(const h of newHistory){const {error}=await sb.from('lembretes').insert({id:h.id,cliente_id:h.clientId,mensalidade_id:h.billId||null,data_programada:(h.due||todayISO())+'T12:00:00',data_envio:null,canal:'whatsapp',status:'pendente',mensagem:h.result||'WhatsApp aberto para envio manual'});if(error)throw error}
+  for(const b of data.bills.filter(x=>x.status==='Pago'&&x.paidAt&&!x.paymentId)){
+   const {data:pay,error}=await sb.from('pagamentos').insert({mensalidade_id:b.id,cliente_id:b.clientId,valor:Number(b.amount),data_pagamento:new Date(b.paidAt+'T12:00:00').toISOString(),forma_pagamento:b.method||'Não informado',observacoes:'Pagamento registrado pelo painel'}).select().single();if(error)throw error;b.paymentId=pay.id;
+  }
+  previous={clients:data.clients.map(x=>x.id),devices:data.devices.map(x=>x.id),plans:data.plans.map(x=>x.id),bills:data.bills.map(x=>x.id),history:data.history.map(x=>x.id)};
+  localStorage.setItem('starOnlineSettings',JSON.stringify(data.settings||{}));renderAll();
+ }catch(e){console.error(e);toast('Não foi possível sincronizar: '+(e.message||'verifique sua conexão'));throw e}
+}
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2600)}
 function statusBadge(s){let c=s==='Ativo'||s==='Pago'?'green':s==='Vencido'||s==='Inadimplente'?'red':s==='Pendente'?'orange':s==='Suspenso'?'orange':'blue';return `<span class="badge ${c}">${esc(s)}</span>`}
 function clientName(id){return data.clients.find(c=>c.id===id)?.name||'Cliente removido'}
@@ -203,15 +245,20 @@ function previewMessage(id){const b=data.bills.find(x=>x.id===id);alert(reminder
 function renderDashboard(){const pending=data.bills.filter(b=>b.status==='Pendente'),late=pending.filter(b=>b.due<todayISO()),soon=pending.filter(b=>b.due>=todayISO()&&b.due<=addDays(todayISO(),7)),month=todayISO().slice(0,7),received=data.bills.filter(b=>b.status==='Pago'&&b.paidAt?.slice(0,7)===month).reduce((s,b)=>s+b.amount,0),open=pending.reduce((s,b)=>s+b.amount,0);$('statClients').textContent=data.clients.length;$('statActive').textContent=data.clients.filter(c=>c.status==='Ativo').length;$('statLate').textContent=late.length;$('statSoon').textContent=soon.length;$('statReceived').textContent=money(received);$('statOpen').textContent=money(open);$('statDevices').textContent=data.devices.length;$('statReminders').textContent=reminderItems().length;const due=pending.sort((a,b)=>a.due.localeCompare(b.due)).slice(0,6);$('dashboardDue').innerHTML=due.length?due.map(b=>`<div class="quick-row"><div><b>${esc(clientName(b.clientId))}</b><div class="muted">${fmtDate(b.due)} • ${money(b.amount)}</div></div>${statusBadge(billStatus(b))}</div>`).join(''):'<div class="empty">Nenhum vencimento pendente.</div>'}
 function renderReports(){const paid=data.bills.filter(b=>b.status==='Pago').reduce((s,b)=>s+b.amount,0),pending=data.bills.filter(b=>b.status==='Pendente').reduce((s,b)=>s+b.amount,0),over=data.bills.filter(b=>billStatus(b)==='Vencido').reduce((s,b)=>s+b.amount,0),debtors=new Set(data.bills.filter(b=>billStatus(b)==='Vencido').map(b=>b.clientId)).size;$('reportPaid').textContent=money(paid);$('reportPending').textContent=money(pending);$('reportOverdue').textContent=money(over);$('reportDebtors').textContent=debtors;const statuses=['Pago','Pendente','Vencido','Cancelado'];$('reportBreakdown').innerHTML=statuses.map(s=>`<div class="quick-row"><span>${s}</span><b>${data.bills.filter(b=>billStatus(b)===s).length} cobrança(s)</b></div>`).join('')}
 function renderAll(){renderDashboard();renderClients();renderDevices();renderPlans();renderBills();renderReminders();renderReports()}
-function saveSettings(){data.settings={companyName:$('companyName').value,companyPhone:$('companyPhone').value,reminderDays:$('reminderDays').value,reminderTime:$('reminderTime').value};save();toast('Configurações salvas')}
+function saveSettings(){data.settings={companyName:$('companyName').value,companyPhone:$('companyPhone').value,reminderDays:$('reminderDays').value,reminderTime:$('reminderTime').value};localStorage.setItem('starOnlineSettings',JSON.stringify(data.settings));renderAll();toast('Configurações salvas neste navegador')}
 function backupData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='star-online-backup.json';a.click();URL.revokeObjectURL(a.href)}
-function clearData(){if(!confirm('Isso apagará todos os dados salvos neste navegador. Deseja continuar?'))return;localStorage.removeItem('starOnlineData');data=loadData();save();toast('Dados locais apagados')}
+function clearData(){toast('A limpeza local não está disponível no modo nuvem. Exclua os registros individualmente.')}
 function exportCSV(){const rows=[['Cliente','Referencia','Valor','Vencimento','Status','Data pagamento'],...data.bills.map(b=>[clientName(b.clientId),b.ref,b.amount,b.due,billStatus(b),b.paidAt])];const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relatorio-star-online.csv';a.click();URL.revokeObjectURL(a.href)}
+// Autenticação e carregamento dos dados na nuvem
+async function enterPanel(session){currentUser=session.user;$('loginScreen').style.display='none';document.querySelector('.app').style.display='grid';$('loginError').textContent='';$('topTitle').textContent='Dashboard';document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';$('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};try{await loadCloud();const settings=JSON.parse(localStorage.getItem('starOnlineSettings')||'{}');data.settings=settings;applySettings();renderAll()}catch(e){console.error(e);$('loginError').textContent='Erro ao carregar dados: '+(e.message||'verifique as tabelas e permissões');$('loginScreen').style.display='flex';document.querySelector('.app').style.display='none'}}
+function applySettings(){if(data.settings.companyName)$('companyName').value=data.settings.companyName;if(data.settings.companyPhone)$('companyPhone').value=data.settings.companyPhone;if(data.settings.reminderDays)$('reminderDays').value=data.settings.reminderDays;if(data.settings.reminderTime)$('reminderTime').value=data.settings.reminderTime}
+$('loginForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$('loginError').textContent='Conectando...';const {data:auth,error}=await sb.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error){$('loginError').textContent='E-mail ou senha incorretos. '+error.message;return}await enterPanel(auth.session)};
+document.querySelector('.app').style.display='none';
+sb.auth.getSession().then(({data:sessionData})=>{if(sessionData.session)enterPanel(sessionData.session)});
+sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){document.querySelector('.app').style.display='none';$('loginScreen').style.display='flex'}});
 // Configurações salvas
 if(data.settings.companyName)$('companyName').value=data.settings.companyName;if(data.settings.companyPhone)$('companyPhone').value=data.settings.companyPhone;if(data.settings.reminderDays)$('reminderDays').value=data.settings.reminderDays;if(data.settings.reminderTime)$('reminderTime').value=data.settings.reminderTime;
-// Planos de exemplo somente no primeiro acesso
-if(!localStorage.getItem('starOnlineData')){data.plans=[{id:uid(),name:'Star Top',price:29.90,desc:'Plano principal'},{id:uid(),name:'Premium',price:40,desc:'Plano premium'}];save()}
-renderAll();
+// O painel é carregado após autenticação no Supabase.
 </script>
 </body>
 </html>
