@@ -198,7 +198,7 @@ const money=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>crypto.randomUUID();
 const emptyData=()=>({clients:[],devices:[],plans:[],bills:[],history:[],settings:{}});
-let data=emptyData(), previous={clients:[],devices:[],plans:[],bills:[]}, currentUser=null;
+let data=emptyData(), previous={clients:[],devices:[],plans:[],bills:[],history:[]}, currentUser=null, currentCompanyId=null;
 function loadData(){try{return JSON.parse(localStorage.getItem('starOnlineData'))||emptyData()}catch(e){return emptyData()}}
 const toDbStatus=(v,map={})=>map[v]||String(v||'').toLowerCase();
 const fromDbStatus=(v,map={})=>map[v]||String(v||'').replace(/^./,c=>c.toUpperCase());
@@ -211,24 +211,38 @@ async function loadCloud(){
  data.bills=bi.map(x=>{const payment=pay.find(y=>y.mensalidade_id===x.id);return{id:x.id,clientId:x.cliente_id,ref:x.competencia||'',amount:Number(x.valor),due:x.data_vencimento,status:fromDbStatus(x.status,{atrasado:'Vencido'}),paidAt:payment?.data_pagamento?.slice(0,10)||'',method:payment?.forma_pagamento||'',paymentId:payment?.id||''}});
  data.history=rem.map(x=>({id:x.id,clientId:x.cliente_id,due:x.data_programada?.slice(0,10)||'',date:x.data_envio?new Date(x.data_envio).toLocaleString('pt-BR'):'',result:x.status==='enviado'?'WhatsApp enviado':'Lembrete registrado'}));
  previous={clients:data.clients.map(x=>x.id),devices:data.devices.map(x=>x.id),plans:data.plans.map(x=>x.id),bills:data.bills.map(x=>x.id),history:data.history.map(x=>x.id)};
- if(!data.plans.length){const defaults=[{nome:'Star Top',descricao:'Plano principal',valor:29.90,ativo:true},{nome:'Premium',descricao:'Plano premium',valor:40,ativo:true}];const {data:inserted,error}=await sb.from('planos').insert(defaults).select();if(error)throw error;data.plans=inserted.map(x=>({id:x.id,name:x.nome,price:Number(x.valor),desc:x.descricao||''}));previous.plans=data.plans.map(x=>x.id)}
+ if(!data.plans.length){const defaults=[{empresa_id:currentCompanyId,nome:'Star Top',descricao:'Plano principal',valor:29.90,ativo:true},{empresa_id:currentCompanyId,nome:'Premium',descricao:'Plano premium',valor:40,ativo:true}];const {data:inserted,error}=await sb.from('planos').insert(defaults).select();if(error)throw error;data.plans=inserted.map(x=>({id:x.id,name:x.nome,price:Number(x.valor),desc:x.descricao||''}));previous.plans=data.plans.map(x=>x.id)}
 }
 async function save(){
  try{
-  const plans=data.plans.map(x=>({id:x.id,nome:x.name,descricao:x.desc||'',valor:Number(x.price)||0,ativo:true}));
-  const clients=data.clients.map(x=>({id:x.id,nome:x.name,telefone:x.phone,email:x.email||null,cpf:x.cpf||null,plano_id:x.planId||null,valor_mensalidade:Number(x.price)||0,data_cadastro:x.created||todayISO(),proximo_vencimento:x.due||null,vencimento_dia:x.due?Number(x.due.slice(8,10)):null,status:toDbStatus(x.status),observacoes:x.notes||null}));
-  const devices=data.devices.map(x=>({id:x.id,cliente_id:x.clientId,tipo_dispositivo:x.name||x.type,sistema_operacional:x.os||null,mac_address:x.mac||null,chave_acesso:x.key||null,data_ativacao:x.activation||null,status:toDbStatus(x.status)}));
-  const bills=data.bills.map(x=>({id:x.id,cliente_id:x.clientId,valor:Number(x.amount)||0,data_vencimento:x.due,competencia:x.ref||null,status:toDbStatus(x.status,{Vencido:'atrasado'})}));
+  if(!currentCompanyId)throw new Error('Empresa não identificada. Saia e entre novamente no painel.');
+  const plans=data.plans.map(x=>({id:x.id,empresa_id:currentCompanyId,nome:x.name,descricao:x.desc||'',valor:Number(x.price)||0,ativo:true}));
+  const clients=data.clients.map(x=>({id:x.id,empresa_id:currentCompanyId,nome:x.name,telefone:x.phone,email:x.email||null,cpf:x.cpf||null,plano_id:x.planId||null,valor_mensalidade:Number(x.price)||0,data_cadastro:x.created||todayISO(),proximo_vencimento:x.due||null,vencimento_dia:x.due?Number(x.due.slice(8,10)):null,status:toDbStatus(x.status),observacoes:x.notes||null}));
+  const devices=data.devices.map(x=>({id:x.id,empresa_id:currentCompanyId,cliente_id:x.clientId,tipo_dispositivo:x.name||x.type,sistema_operacional:x.os||null,mac_address:x.mac||null,chave_acesso:x.key||null,data_ativacao:x.activation||null,status:toDbStatus(x.status)}));
+  const bills=data.bills.map(x=>({id:x.id,empresa_id:currentCompanyId,cliente_id:x.clientId,valor:Number(x.amount)||0,data_vencimento:x.due,competencia:x.ref||null,status:toDbStatus(x.status,{Vencido:'atrasado'})}));
   for(const [table,rows] of [['planos',plans],['clientes',clients],['aparelhos',devices],['mensalidades',bills]]) if(rows.length){const {error}=await sb.from(table).upsert(rows);if(error)throw error}
-  for(const [table,key] of [['aparelhos','devices'],['mensalidades','bills'],['clientes','clients'],['planos','plans']]){const now=data[key].map(x=>x.id),gone=previous[key].filter(id=>!now.includes(id));if(gone.length){const {error}=await sb.from(table).delete().in('id',gone);if(error)throw error}}
+  for(const [table,key] of [['aparelhos','devices'],['mensalidades','bills'],['clientes','clients'],['planos','plans']]){
+   const now=data[key].map(x=>x.id),gone=previous[key].filter(id=>!now.includes(id));
+   if(gone.length){const {error}=await sb.from(table).delete().in('id',gone);if(error)throw error}
+  }
   const newHistory=data.history.filter(h=>!previous.history.includes(h.id));
-  for(const h of newHistory){const {error}=await sb.from('lembretes').insert({id:h.id,cliente_id:h.clientId,mensalidade_id:h.billId||null,data_programada:(h.due||todayISO())+'T12:00:00',data_envio:null,canal:'whatsapp',status:'pendente',mensagem:h.result||'WhatsApp aberto para envio manual'});if(error)throw error}
+  for(const h of newHistory){
+   const {error}=await sb.from('lembretes').insert({id:h.id,empresa_id:currentCompanyId,cliente_id:h.clientId,mensalidade_id:h.billId||null,data_programada:(h.due||todayISO())+'T12:00:00',data_envio:null,canal:'whatsapp',status:'pendente',mensagem:h.result||'WhatsApp aberto para envio manual'});
+   if(error)throw error;
+  }
   for(const b of data.bills.filter(x=>x.status==='Pago'&&x.paidAt&&!x.paymentId)){
-   const {data:pay,error}=await sb.from('pagamentos').insert({mensalidade_id:b.id,cliente_id:b.clientId,valor:Number(b.amount),data_pagamento:new Date(b.paidAt+'T12:00:00').toISOString(),forma_pagamento:b.method||'Não informado',observacoes:'Pagamento registrado pelo painel'}).select().single();if(error)throw error;b.paymentId=pay.id;
+   const {data:pay,error}=await sb.from('pagamentos').insert({empresa_id:currentCompanyId,mensalidade_id:b.id,cliente_id:b.clientId,valor:Number(b.amount),data_pagamento:new Date(b.paidAt+'T12:00:00').toISOString(),forma_pagamento:b.method||'Não informado',observacoes:'Pagamento registrado pelo painel'}).select().single();
+   if(error)throw error;
+   b.paymentId=pay.id;
   }
   previous={clients:data.clients.map(x=>x.id),devices:data.devices.map(x=>x.id),plans:data.plans.map(x=>x.id),bills:data.bills.map(x=>x.id),history:data.history.map(x=>x.id)};
-  localStorage.setItem('starOnlineSettings',JSON.stringify(data.settings||{}));renderAll();
- }catch(e){console.error(e);toast('Não foi possível sincronizar: '+(e.message||'verifique sua conexão'));throw e}
+  localStorage.setItem('starOnlineSettings',JSON.stringify(data.settings||{}));
+  renderAll();
+ }catch(e){
+  console.error('Falha na sincronização:',e);
+  toast('Não foi possível sincronizar: '+(e.message||'verifique sua conexão'));
+  throw e;
+ }
 }
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2600)}
 function statusBadge(s){let c=s==='Ativo'||s==='Pago'?'green':s==='Vencido'||s==='Inadimplente'?'red':s==='Pendente'?'orange':s==='Suspenso'?'orange':'blue';return `<span class="badge ${c}">${esc(s)}</span>`}
@@ -260,7 +274,56 @@ function openPlanModal(id){const p=data.plans.find(x=>x.id===id)||{};openModal(i
 $('planForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id'),obj={id:id||uid(),name:f.get('name'),price:Number(f.get('price')),desc:f.get('desc')};if(id)data.plans=data.plans.map(x=>x.id===id?obj:x);else data.plans.push(obj);closeModal();save();toast('Plano salvo')}}
 function openBillModal(){openModal('Nova cobrança',`<form id="billForm" class="form-grid"><div class="field"><label>Cliente *</label><select name="clientId" required>${data.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>Referência</label><input name="ref" placeholder="11/2026"></div><div class="field"><label>Valor (R$) *</label><input name="amount" type="number" min="0" step=".01" required></div><div class="field"><label>Vencimento *</label><input name="due" type="date" required value="${todayISO()}"></div><div class="field full"><div class="form-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary">Criar cobrança</button></div></div></form>`);
 $('billForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);data.bills.push({id:uid(),clientId:f.get('clientId'),ref:f.get('ref'),amount:Number(f.get('amount')),due:f.get('due'),status:'Pendente',paidAt:'',method:''});closeModal();save();toast('Cobrança criada')}}
-function markPaid(id){const b=data.bills.find(x=>x.id===id);if(!b)return;if(!confirm('Confirmar o recebimento desta cobrança?'))return;b.status='Pago';b.paidAt=todayISO();const c=data.clients.find(x=>x.id===b.clientId);if(c){c.due=addDays(b.due,30);if(c.status==='Inadimplente')c.status='Ativo'}data.history.unshift({id:uid(),billId:id,clientId:b.clientId,due:b.due,date:new Date().toLocaleString('pt-BR'),result:'Pagamento registrado'});save();toast('Pagamento registrado')}
+async function markPaid(id){
+ const b=data.bills.find(x=>x.id===id);
+ if(!b||b.status==='Pago')return;
+ if(!confirm('Confirmar o recebimento desta cobrança?'))return;
+ if(!currentCompanyId){toast('Empresa não identificada. Entre novamente no painel.');return}
+ const btns=[...document.querySelectorAll('button')];
+ try{
+  const paidAt=todayISO();
+  // Registra primeiro o recebimento com o identificador da empresa.
+  const {data:payment,error:paymentError}=await sb.from('pagamentos').insert({
+   empresa_id:currentCompanyId,
+   mensalidade_id:b.id,
+   cliente_id:b.clientId,
+   valor:Number(b.amount),
+   data_pagamento:new Date(paidAt+'T12:00:00').toISOString(),
+   forma_pagamento:b.method||'Não informado',
+   observacoes:'Pagamento registrado pelo painel'
+  }).select().single();
+  if(paymentError)throw paymentError;
+
+  // Atualiza a mensalidade; se falhar, tenta desfazer o pagamento recém-inserido.
+  const {data:updatedBill,error:billError}=await sb.from('mensalidades')
+   .update({status:'pago'})
+   .eq('id',b.id)
+   .eq('empresa_id',currentCompanyId)
+   .select('id')
+   .maybeSingle();
+  if(billError||!updatedBill){
+   await sb.from('pagamentos').delete().eq('id',payment.id).eq('empresa_id',currentCompanyId);
+   throw billError||new Error('A mensalidade não foi atualizada. O registro do pagamento foi cancelado.');
+  }
+
+  b.status='Pago';
+  b.paidAt=paidAt;
+  b.paymentId=payment.id;
+  const c=data.clients.find(x=>x.id===b.clientId);
+  if(c){
+   c.due=addDays(b.due,30);
+   if(c.status==='Inadimplente')c.status='Ativo';
+  }
+  data.history.unshift({id:uid(),billId:id,clientId:b.clientId,due:b.due,date:new Date().toLocaleString('pt-BR'),result:'Pagamento registrado'});
+  await save();
+  toast('Pagamento confirmado e sincronizado!');
+ }catch(error){
+  console.error('Erro ao confirmar pagamento:',error);
+  toast('Falha ao confirmar pagamento: '+(error.message||'verifique as permissões'));
+  // Atualiza a tela para refletir o estado local sem declarar sucesso.
+  renderAll();
+ }
+}
 function removeItem(type,id){if(!confirm('Deseja realmente excluir este registro?'))return;if(type==='client'){data.clients=data.clients.filter(x=>x.id!==id);data.devices=data.devices.filter(x=>x.clientId!==id);data.bills=data.bills.filter(x=>x.clientId!==id)}if(type==='device')data.devices=data.devices.filter(x=>x.id!==id);if(type==='plan')data.plans=data.plans.filter(x=>x.id!==id);if(type==='bill')data.bills=data.bills.filter(x=>x.id!==id);save()}
 function renderClients(){const q=($('clientSearch')?.value||'').toLowerCase(),st=$('clientStatus')?.value||'';const rows=data.clients.filter(c=>(c.name+' '+c.phone+' '+c.id).toLowerCase().includes(q)&&(!st||c.status===st));$('clientsTable').innerHTML=rows.length?rows.map(c=>`<tr><td><b>${esc(c.name)}</b><div class="muted">#${c.id}</div></td><td>${esc(c.phone)}</td><td>${esc(data.plans.find(p=>p.id===c.planId)?.name||'—')}</td><td>${fmtDate(c.due)}</td><td>${statusBadge(c.status)}</td><td><div class="actions"><button class="icon-btn" onclick="openClientModal('${c.id}')">Editar</button><button class="icon-btn" onclick="removeItem('client','${c.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Nenhum cliente cadastrado.</td></tr>'}
 function renderDevices(){const q=($('deviceSearch')?.value||'').toLowerCase();const rows=data.devices.filter(d=>(clientName(d.clientId)+' '+d.mac+' '+d.key+' '+d.name).toLowerCase().includes(q));$('devicesTable').innerHTML=rows.length?rows.map(d=>`<tr><td>${esc(clientName(d.clientId))}</td><td><b>${esc(d.name)}</b><div class="muted">${esc(d.type)} • ${esc(d.os)}</div></td><td>${esc(d.mac||'—')}</td><td><span title="Chave protegida">${d.key?'••••••••':'—'}</span></td><td>${statusBadge(d.status)}</td><td><div class="actions"><button class="icon-btn" onclick="openDeviceModal('${d.id}')">Editar</button><button class="icon-btn" onclick="removeItem('device','${d.id}')">Excluir</button></div></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Nenhum aparelho cadastrado.</td></tr>'}
@@ -281,7 +344,39 @@ function backupData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'a
 function clearData(){toast('A limpeza local não está disponível no modo nuvem. Exclua os registros individualmente.')}
 function exportCSV(){const rows=[['Cliente','Referencia','Valor','Vencimento','Status','Data pagamento'],...data.bills.map(b=>[clientName(b.clientId),b.ref,b.amount,b.due,billStatus(b),b.paidAt])];const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relatorio-star-online.csv';a.click();URL.revokeObjectURL(a.href)}
 // Autenticação e carregamento dos dados na nuvem
-async function enterPanel(session){currentUser=session.user;$('loginScreen').style.display='none';document.querySelector('.app').style.display='grid';$('loginError').textContent='';$('topTitle').textContent='Dashboard';document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';$('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};try{await loadCloud();const settings=JSON.parse(localStorage.getItem('starOnlineSettings')||'{}');data.settings=settings;applySettings();renderAll()}catch(e){console.error(e);$('loginError').textContent='Erro ao carregar dados: '+(e.message||'verifique as tabelas e permissões');$('loginScreen').style.display='flex';document.querySelector('.app').style.display='none'}}
+async function enterPanel(session){
+ currentUser=session.user;
+ $('loginError').textContent='Verificando acesso...';
+ try{
+  // Descobre a empresa do usuário autenticado antes de consultar/gravar dados.
+  const {data:membership,error:membershipError}=await sb
+   .from('membros_empresa')
+   .select('empresa_id')
+   .eq('user_id',currentUser.id)
+   .maybeSingle();
+  if(membershipError)throw membershipError;
+  if(!membership?.empresa_id)throw new Error('Não encontramos uma empresa vinculada a este usuário.');
+  currentCompanyId=membership.empresa_id;
+
+  $('loginScreen').style.display='none';
+  document.querySelector('.app').style.display='grid';
+  $('loginError').textContent='';
+  $('topTitle').textContent='Dashboard';
+  document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';
+  $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
+  await loadCloud();
+  const settings=JSON.parse(localStorage.getItem('starOnlineSettings')||'{}');
+  data.settings=settings;
+  applySettings();
+  renderAll();
+ }catch(e){
+  console.error('Erro ao iniciar painel:',e);
+  currentCompanyId=null;
+  $('loginError').textContent='Não foi possível carregar o painel: '+(e.message||'verifique o vínculo da empresa e as permissões RLS');
+  $('loginScreen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+ }
+}
 function applySettings(){if(data.settings.companyName)$('companyName').value=data.settings.companyName;if(data.settings.companyPhone)$('companyPhone').value=data.settings.companyPhone;if(data.settings.reminderDays)$('reminderDays').value=data.settings.reminderDays;if(data.settings.reminderTime)$('reminderTime').value=data.settings.reminderTime}
 $('showRegister').onclick=()=>{
  $('loginForm').style.display='none';
