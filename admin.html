@@ -1184,17 +1184,33 @@ $('paymentCompany').addEventListener(
   preencherAssinaturasPagamento
 );
 
+
 $('paymentSubscription').addEventListener(
   'change',
   function(){
 
-    const select = $('paymentSubscription');
+    const assinaturaId = $('paymentSubscription').value;
 
-    const opcao = select.options[select.selectedIndex];
+    const assinatura = assinaturasCarregadas.find(
+      a => a.id === assinaturaId
+    );
 
-    const valor = opcao.dataset.valorMensal;
+    if(!assinatura){
+      $('paymentAmount').value = '';
+      return;
+    }
 
-    $('paymentAmount').value = valor || '';
+    const plano = planosCarregados.find(
+      p => p.id === assinatura.plano_saas_id
+    );
+
+    if(!plano || plano.valor_mensal === null){
+      $('paymentAmount').value = '';
+      return;
+    }
+
+    $('paymentAmount').value =
+      Number(plano.valor_mensal).toFixed(2);
 
   }
 );
