@@ -46,6 +46,7 @@ button{
   cursor:pointer;
 }
 button:hover{opacity:.9}
+button:disabled{opacity:.5;cursor:wait}
 .hidden{display:none!important}
 .header{
   display:flex;
@@ -77,6 +78,47 @@ button:hover{opacity:.9}
   margin-top:15px;
   color:#ffb4a9;
   font-size:14px;
+}
+.section{
+  margin-top:35px;
+  background:#1c293b;
+  border:1px solid #304057;
+  border-radius:13px;
+  padding:22px;
+}
+.section-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:15px;
+}
+.section-header h2{margin:0}
+.search{
+  max-width:400px;
+  margin:10px 0 18px;
+}
+.table-wrap{
+  overflow-x:auto;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:650px;
+}
+th,td{
+  padding:14px 12px;
+  text-align:left;
+  border-bottom:1px solid #304057;
+  font-size:14px;
+}
+th{color:#e9b949}
+td{color:#e0e7f0}
+.empty{
+  padding:25px;
+  text-align:center;
+  color:#aebbd0;
 }
 </style>
 </head>
@@ -141,17 +183,59 @@ button:hover{opacity:.9}
 
   <div id="dashboardMessage" class="message"></div>
 
+  <!-- MÓDULO EMPRESAS -->
+
+  <div class="section">
+
+    <div class="section-header">
+      <h2>Empresas cadastradas</h2>
+      <button id="refreshCompanies">Atualizar lista</button>
+    </div>
+
+    <input
+      type="text"
+      id="companySearch"
+      class="search"
+      placeholder="Pesquisar empresa ou e-mail..."
+    >
+
+    <div class="table-wrap">
+
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>E-mail</th>
+            <th>Telefone</th>
+            <th>Cadastro</th>
+          </tr>
+        </thead>
+
+        <tbody id="companiesTable">
+          <tr>
+            <td colspan="4" class="empty">
+              Carregando empresas...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+
+    <div id="companiesMessage" class="message"></div>
+
+  </div>
+
 </div>
 
 <script>
 // CONFIGURAÇÃO SUPABASE
+
 const SUPABASE_URL =
 'https://hwvrxzgwrimioextcqtl.supabase.co';
 
-// Cole aqui a mesma chave PUBLICÁVEL
-// utilizada no index.html.
-// Nunca utilize a service_role key.
-const SUPABASE_KEY = 'sb_publishable_ZE2MMH6V7N0Bc2oaMNZ7Eg_dFAd6FE7';
+const SUPABASE_KEY =
+'sb_publishable_ZE2MMH6V7N0Bc2oaMNZ7Eg_dFAd6FE7';
 
 const sb = window.supabase.createClient(
   SUPABASE_URL,
@@ -160,9 +244,27 @@ const sb = window.supabase.createClient(
 
 const $ = id => document.getElementById(id);
 
+let empresasCarregadas = [];
+
 function showMessage(message){
   $('loginMessage').textContent = message;
 }
+
+// PROTEÇÃO CONTRA HTML INDESEJADO NOS DADOS
+
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, function(char){
+    return {
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#039;'
+    }[char];
+  });
+}
+
+// CARREGAR INDICADORES
 
 async function loadDashboard(){
 
@@ -211,6 +313,98 @@ async function loadDashboard(){
     'Informações atualizadas com sucesso.';
 }
 
+// CARREGAR EMPRESAS
+
+async function loadCompanies(){
+
+  $('companiesTable').innerHTML = `
+    <tr>
+      <td colspan="4" class="empty">
+        Carregando empresas...
+      </td>
+    </tr>
+  `;
+
+  $('companiesMessage').textContent = '';
+
+  const {data,error} = await sb
+    .from('empresas')
+    .select('id,nome_fantasia,email,telefone,created_at')
+    .order('created_at', {ascending:false});
+
+  if(error){
+
+    $('companiesTable').innerHTML = `
+      <tr>
+        <td colspan="4" class="empty">
+          Não foi possível carregar as empresas.
+        </td>
+      </tr>
+    `;
+
+    $('companiesMessage').textContent =
+      'Erro: ' + error.message;
+
+    console.error(error);
+    return;
+  }
+
+  empresasCarregadas = data || [];
+
+  renderCompanies();
+}
+
+// MOSTRAR EMPRESAS NA TABELA
+
+function renderCompanies(){
+
+  const pesquisa = $('companySearch').value
+    .trim()
+    .toLowerCase();
+
+  const filtradas = empresasCarregadas.filter(empresa => {
+
+    const nome = (empresa.nome_fantasia || '').toLowerCase();
+    const email = (empresa.email || '').toLowerCase();
+
+    return nome.includes(pesquisa) ||
+           email.includes(pesquisa);
+  });
+
+  if(filtradas.length === 0){
+
+    $('companiesTable').innerHTML = `
+      <tr>
+        <td colspan="4" class="empty">
+          Nenhuma empresa encontrada.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  $('companiesTable').innerHTML =
+    filtradas.map(empresa => {
+
+      const dataCadastro = empresa.created_at
+        ? new Date(empresa.created_at).toLocaleDateString('pt-BR')
+        : '-';
+
+      return `
+        <tr>
+          <td>${escapeHTML(empresa.nome_fantasia || 'Sem nome')}</td>
+          <td>${escapeHTML(empresa.email || '-')}</td>
+          <td>${escapeHTML(empresa.telefone || '-')}</td>
+          <td>${escapeHTML(dataCadastro)}</td>
+        </tr>
+      `;
+
+    }).join('');
+}
+
+// VERIFICAR AUTORIZAÇÃO ADMINISTRATIVA
+
 async function enterAdmin(){
 
   const {data,error} =
@@ -235,7 +429,10 @@ async function enterAdmin(){
   $('dashboard').classList.remove('hidden');
 
   await loadDashboard();
+  await loadCompanies();
 }
+
+// LOGIN
 
 $('loginForm').addEventListener('submit',async function(e){
 
@@ -271,6 +468,16 @@ $('loginForm').addEventListener('submit',async function(e){
 
 });
 
+// PESQUISA
+
+$('companySearch').addEventListener('input',renderCompanies);
+
+// ATUALIZAR LISTA
+
+$('refreshCompanies').addEventListener('click',loadCompanies);
+
+// SAIR
+
 $('logoutButton').addEventListener('click',async function(){
 
   await sb.auth.signOut();
@@ -279,9 +486,15 @@ $('logoutButton').addEventListener('click',async function(){
   $('loginScreen').classList.remove('hidden');
 
   $('password').value = '';
+  $('companySearch').value = '';
+
+  empresasCarregadas = [];
+
   showMessage('Você saiu do painel.');
 
 });
+
+// VERIFICAR SESSÃO EXISTENTE
 
 async function init(){
 
