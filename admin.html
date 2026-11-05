@@ -335,6 +335,98 @@ td{color:#e0e7f0}
 
 </div>
 
+<!-- MÓDULO FINANCEIRO SAAS -->
+
+<div class="section" id="financialModule">
+
+  <div class="section-header">
+    <h2>Financeiro SaaS</h2>
+    <button id="refreshPayments">Atualizar financeiro</button>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <small>Total recebido</small>
+      <div id="totalReceived" class="number">R$ 0,00</div>
+    </div>
+
+    <div class="card">
+      <small>Pagamentos pendentes</small>
+      <div id="totalPending" class="number">0</div>
+    </div>
+
+  </div>
+
+  <h3 style="color:#e9b949;margin-top:30px">
+    Registrar pagamento
+  </h3>
+
+  <label>Empresa</label>
+  <select id="paymentCompany">
+    <option value="">Selecione a empresa</option>
+  </select>
+
+  <label>Assinatura</label>
+  <select id="paymentSubscription">
+    <option value="">Selecione a assinatura</option>
+  </select>
+
+  <label>Valor do pagamento (R$)</label>
+  <input
+    id="paymentAmount"
+    type="number"
+    min="0.01"
+    step="0.01"
+    placeholder="Ex.: 49.90"
+  >
+
+  <label>Observações</label>
+  <input
+    id="paymentNotes"
+    type="text"
+    placeholder="Ex.: PIX recebido via WhatsApp"
+  >
+
+  <button id="registerPayment">
+    Registrar PIX pendente
+  </button>
+
+  <div id="paymentMessage" class="message"></div>
+
+  <h3 style="color:#e9b949;margin-top:35px">
+    Histórico de pagamentos
+  </h3>
+
+  <div class="table-wrap">
+
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Valor</th>
+          <th>Forma</th>
+          <th>Status</th>
+          <th>Data</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+
+      <tbody id="paymentsTable">
+        <tr>
+          <td colspan="6" class="empty">
+            Carregando pagamentos...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+
+</div>
+
+<!-- FIM DO MÓDULO FINANCEIRO -->
+
 <!-- JANELA DE DETALHES DA EMPRESA -->
 
 <div id="companyModal" class="modal hidden">
