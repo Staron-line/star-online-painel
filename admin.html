@@ -6,7 +6,69 @@
 <title>Star Online | Administração SaaS</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+  
+/* JANELA DE DETALHES DA EMPRESA */
+.modal{
+  position:fixed;
+  inset:0;
+  background:#000b;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:15px;
+  z-index:9999;
+}
+.modal-content{
+  background:#1c293b;
+  border:1px solid #40516a;
+  border-radius:15px;
+  padding:25px;
+  width:min(750px,100%);
+  max-height:90vh;
+  overflow-y:auto;
+}
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:20px;
+}
+.modal-header h2{
+  color:#e9b949;
+  margin:0;
+}
+.modal-close{
+  background:#40516a;
+  color:white;
+}
+.detail-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.detail-item{
+  background:#101827;
+  padding:14px;
+  border-radius:8px;
+  overflow-wrap:anywhere;
+}
+.detail-item small{
+  display:block;
+  color:#aebbd0;
+  margin-bottom:7px;
+}
+.detail-item strong{
+  font-size:14px;
+}
+.detail-title{
+  color:#e9b949;
+  margin:25px 0 12px;
+}
+.company-action{
+  padding:8px 12px;
+  font-size:12px;
+}
 <style>
 *{box-sizing:border-box}
 body{
@@ -208,6 +270,7 @@ td{color:#e0e7f0}
             <th>E-mail</th>
             <th>Telefone</th>
             <th>Cadastro</th>
+            <th>Ação</th>
           </tr>
         </thead>
 
@@ -222,9 +285,30 @@ td{color:#e0e7f0}
 
     </div>
 
-    <div id="companiesMessage" class="message"></div>
+  <div id="companiesMessage" class="message"></div>
+
+</div>
+
+<!-- JANELA DE DETALHES DA EMPRESA -->
+
+<div id="companyModal" class="modal hidden">
+
+  <div class="modal-content">
+
+    <div class="modal-header">
+      <h2>Detalhes da empresa</h2>
+      <button class="modal-close" id="closeCompanyModal">
+        Fechar
+      </button>
+    </div>
+
+    <div id="companyDetails">
+      Carregando informações...
+    </div>
 
   </div>
+
+</div>
 
 </div>
 
@@ -375,7 +459,7 @@ function renderCompanies(){
 
     $('companiesTable').innerHTML = `
       <tr>
-        <td colspan="4" class="empty">
+        <td colspan="5" class="empty">
           Nenhuma empresa encontrada.
         </td>
       </tr>
@@ -397,6 +481,12 @@ function renderCompanies(){
           <td>${escapeHTML(empresa.email || '-')}</td>
           <td>${escapeHTML(empresa.telefone || '-')}</td>
           <td>${escapeHTML(dataCadastro)}</td>
+          <td>
+  <button class="company-action"
+    data-company-id="${escapeHTML(empresa.id)}">
+    Ver detalhes
+  </button>
+</td>
         </tr>
       `;
 
@@ -404,6 +494,240 @@ function renderCompanies(){
 }
 
 // VERIFICAR AUTORIZAÇÃO ADMINISTRATIVA
+  // ABRIR DETALHES DA EMPRESA
+
+async function verDetalhesEmpresa(id){
+
+  const modal = $('companyModal');
+  const area = $('companyDetails');
+
+  modal.classList.remove('hidden');
+  area.innerHTML = 'Carregando informações...';
+
+  const empresa = empresasCarregadas.find(
+    item => item.id === id
+  );
+
+  if(!empresa){
+    area.textContent = 'Empresa não encontrada.';
+    return;
+  }
+
+  try{
+
+    const [assinaturasResult,membrosResult] =
+      await Promise.all([
+
+        sb.from('assinaturas')
+          .select(`
+            id,
+            status,
+            inicio_teste,
+            fim_teste,
+            inicio_ciclo,
+            fim_ciclo,
+            gateway,
+            id_assinatura_gateway,
+            plano_saas_id,
+            created_at
+          `)
+          .eq('empresa_id',id)
+          .order('created_at',{ascending:false}),
+
+        sb.from('membros_empresa')
+          .select('user_id,papel,created_at')
+          .eq('empresa_id',id)
+      ]);
+
+    if(assinaturasResult.error){
+      throw assinaturasResult.error;
+    }
+
+    if(membrosResult.error){
+      throw membrosResult.error;
+    }
+
+    const assinatura = assinaturasResult.data?.[0];
+
+    let plano = null;
+
+    if(assinatura?.plano_saas_id){
+
+      const resultadoPlano = await sb
+        .from('planos_saas')
+        .select('nome,valor_mensal')
+        .eq('id',assinatura.plano_saas_id)
+        .maybeSingle();
+
+      if(resultadoPlano.error){
+        throw resultadoPlano.error;
+      }
+
+      plano = resultadoPlano.data;
+    }
+
+    function dataBR(valor){
+      if(!valor) return '-';
+
+      return new Date(valor).toLocaleDateString('pt-BR');
+    }
+
+    function dinheiro(valor){
+      if(valor === null || valor === undefined) return '-';
+
+      return Number(valor).toLocaleString('pt-BR',{
+        style:'currency',
+        currency:'BRL'
+      });
+    }
+
+    const membros = membrosResult.data || [];
+
+    area.innerHTML = `
+
+      <h3 class="detail-title">Dados cadastrais</h3>
+
+      <div class="detail-grid">
+
+        <div class="detail-item">
+          <small>Nome fantasia</small>
+          <strong>${escapeHTML(empresa.nome_fantasia || '-')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Nome de exibição</small>
+          <strong>${escapeHTML(empresa.nome_exibicao || '-')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>E-mail</small>
+          <strong>${escapeHTML(empresa.email || '-')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Telefone</small>
+          <strong>${escapeHTML(empresa.telefone || '-')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Data de cadastro</small>
+          <strong>${dataBR(empresa.created_at)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>ID da empresa</small>
+          <strong>${escapeHTML(empresa.id)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>ID do criador</small>
+          <strong>${escapeHTML(empresa.created_by || '-')}</strong>
+        </div>
+
+      </div>
+
+      <h3 class="detail-title">Assinatura e plano</h3>
+
+      <div class="detail-grid">
+
+        <div class="detail-item">
+          <small>Situação da assinatura</small>
+          <strong>${escapeHTML(assinatura?.status || 'Sem assinatura')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Plano contratado</small>
+          <strong>${escapeHTML(plano?.nome || 'Não identificado')}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Valor mensal</small>
+          <strong>${dinheiro(plano?.valor_mensal)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Início do teste</small>
+          <strong>${dataBR(assinatura?.inicio_teste)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Fim do teste</small>
+          <strong>${dataBR(assinatura?.fim_teste)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Início do ciclo</small>
+          <strong>${dataBR(assinatura?.inicio_ciclo)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Fim do ciclo</small>
+          <strong>${dataBR(assinatura?.fim_ciclo)}</strong>
+        </div>
+
+        <div class="detail-item">
+          <small>Gateway de pagamento</small>
+          <strong>${escapeHTML(assinatura?.gateway || '-')}</strong>
+        </div>
+
+      </div>
+
+      <h3 class="detail-title">
+        Membros vinculados (${membros.length})
+      </h3>
+
+      ${
+        membros.length
+        ? membros.map(membro => `
+
+          <div class="detail-item" style="margin-bottom:10px">
+
+            <small>Usuário</small>
+            <strong>${escapeHTML(membro.user_id)}</strong>
+
+            <br><br>
+
+            <small>Permissão</small>
+            <strong>${escapeHTML(membro.papel || '-')}</strong>
+
+          </div>
+
+        `).join('')
+        : '<p>Nenhum membro vinculado.</p>'
+      }
+
+    `;
+
+  }catch(error){
+
+    console.error(error);
+
+    area.textContent =
+      'Erro ao consultar detalhes: ' + error.message;
+
+  }
+
+}
+
+// CLIQUE NO BOTÃO VER DETALHES
+
+$('companiesTable').addEventListener('click',function(e){
+
+  const botao = e.target.closest('[data-company-id]');
+
+  if(!botao) return;
+
+  verDetalhesEmpresa(botao.dataset.companyId);
+
+});
+
+// FECHAR JANELA
+
+$('closeCompanyModal').addEventListener('click',function(){
+
+  $('companyModal').classList.add('hidden');
+
+});
 
 async function enterAdmin(){
 
