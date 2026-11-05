@@ -734,6 +734,381 @@ function renderSubscriptions(){
   }).join('');
 }
 
+// ==========================================
+// MÓDULO FINANCEIRO SAAS
+// ==========================================
+
+// Preencher empresas
+function preencherEmpresasPagamento(){
+
+  const select = $('paymentCompany');
+
+  select.innerHTML =
+    '<option value="">Selecione a empresa</option>';
+
+  empresasCarregadas.forEach(empresa => {
+
+    const option = document.createElement('option');
+
+    option.value = empresa.id;
+    option.textContent = empresa.nome_fantasia || 'Sem nome';
+
+    select.appendChild(option);
+
+  });
+
+  preencherAssinaturasPagamento();
+}
+
+
+// Preencher assinaturas conforme empresa escolhida
+function preencherAssinaturasPagamento(){
+
+  const empresaId = $('paymentCompany').value;
+  const select = $('paymentSubscription');
+
+  select.innerHTML =
+    '<option value="">Selecione a assinatura</option>';
+
+  const planosPorId = new Map(
+    planosCarregados.map(plano => [plano.id, plano])
+  );
+
+  assinaturasCarregadas
+    .filter(a =>
+      a.empresa_id === empresaId &&
+      a.status !== 'cancelada'
+    )
+    .forEach(assinatura => {
+
+      const plano = planosPorId.get(
+        assinatura.plano_saas_id
+      );
+
+      const option = document.createElement('option');
+
+      option.value = assinatura.id;
+
+      option.textContent =
+        (plano?.nome || 'Plano') +
+        ' - ' + (assinatura.status || '');
+
+      select.appendChild(option);
+
+    });
+}
+
+
+// Formatar dinheiro
+function formatarDinheiro(valor){
+
+  return Number(valor || 0).toLocaleString('pt-BR',{
+    style:'currency',
+    currency:'BRL'
+  });
+
+}
+
+
+// Formatar data
+function formatarDataPagamento(valor){
+
+  if(!valor) return '-';
+
+  return new Date(valor).toLocaleDateString('pt-BR');
+
+}
+
+
+// Carregar pagamentos
+async function loadPayments(){
+
+  $('paymentsTable').innerHTML = `
+    <tr>
+      <td colspan="6" class="empty">
+        Carregando pagamentos...
+      </td>
+    </tr>
+  `;
+
+  $('paymentMessage').textContent = '';
+
+  const {data,error} = await sb
+    .from('pagamentos_saas')
+    .select(`
+      id,
+      empresa_id,
+      assinatura_id,
+      valor,
+      forma_pagamento,
+      status,
+      data_pagamento,
+      created_at,
+      observacoes
+    `)
+    .order('created_at',{ascending:false});
+
+  if(error){
+
+    $('paymentsTable').innerHTML = `
+      <tr>
+        <td colspan="6" class="empty">
+          Erro ao carregar pagamentos.
+        </td>
+      </tr>
+    `;
+
+    $('paymentMessage').textContent =
+      'Erro: ' + error.message;
+
+    console.error(error);
+    return;
+  }
+
+  renderPayments(data || []);
+
+}
+
+
+// Mostrar histórico financeiro
+function renderPayments(pagamentos){
+
+  const empresasPorId = new Map(
+    empresasCarregadas.map(e => [e.id,e])
+  );
+
+  const recebidos = pagamentos
+    .filter(p => p.status === 'confirmado');
+
+  const pendentes = pagamentos
+    .filter(p => p.status === 'pendente');
+
+  const totalRecebido = recebidos.reduce(
+    (total,p) => total + Number(p.valor),0
+  );
+
+  $('totalReceived').textContent =
+    formatarDinheiro(totalRecebido);
+
+  $('totalPending').textContent =
+    pendentes.length;
+
+  if(pagamentos.length === 0){
+
+    $('paymentsTable').innerHTML = `
+      <tr>
+        <td colspan="6" class="empty">
+          Nenhum pagamento registrado.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  $('paymentsTable').innerHTML =
+    pagamentos.map(p => {
+
+      const empresa = empresasPorId.get(p.empresa_id);
+
+      const acao = p.status === 'pendente'
+        ? `<button
+             class="company-action"
+             data-confirm-payment="${escapeHTML(p.id)}">
+             Confirmar recebimento
+           </button>`
+        : escapeHTML(p.status);
+
+      return `
+        <tr>
+          <td>${escapeHTML(
+            empresa?.nome_fantasia || 'Empresa não encontrada'
+          )}</td>
+
+          <td>${formatarDinheiro(p.valor)}</td>
+
+          <td>${escapeHTML(p.forma_pagamento || 'PIX')}</td>
+
+          <td>${escapeHTML(p.status)}</td>
+
+          <td>${formatarDataPagamento(
+            p.data_pagamento || p.created_at
+          )}</td>
+
+          <td>${acao}</td>
+        </tr>
+      `;
+
+    }).join('');
+
+}
+
+
+// Registrar pagamento pendente
+async function registerPayment(){
+
+  const empresaId = $('paymentCompany').value;
+  const assinaturaId = $('paymentSubscription').value;
+  const valor = Number($('paymentAmount').value);
+  const observacoes = $('paymentNotes').value.trim();
+
+  if(!empresaId){
+    $('paymentMessage').textContent =
+      'Selecione uma empresa.';
+    return;
+  }
+
+  if(!assinaturaId){
+    $('paymentMessage').textContent =
+      'Selecione uma assinatura.';
+    return;
+  }
+
+  if(!Number.isFinite(valor) || valor <= 0){
+    $('paymentMessage').textContent =
+      'Informe um valor válido.';
+    return;
+  }
+
+  const assinatura = assinaturasCarregadas.find(
+    a => a.id === assinaturaId
+  );
+
+  if(!assinatura || assinatura.empresa_id !== empresaId){
+    $('paymentMessage').textContent =
+      'A assinatura não corresponde à empresa selecionada.';
+    return;
+  }
+
+  if(assinatura.status === 'cancelada'){
+    $('paymentMessage').textContent =
+      'Não é possível registrar pagamento para assinatura cancelada.';
+    return;
+  }
+
+  const botao = $('registerPayment');
+
+  botao.disabled = true;
+  $('paymentMessage').textContent =
+    'Registrando pagamento...';
+
+  try{
+
+    const {error} = await sb
+      .from('pagamentos_saas')
+      .insert({
+        empresa_id: empresaId,
+        assinatura_id: assinaturaId,
+        valor: valor,
+        forma_pagamento: 'PIX',
+        status: 'pendente',
+        observacoes: observacoes || null
+      });
+
+    if(error) throw error;
+
+    $('paymentAmount').value = '';
+    $('paymentNotes').value = '';
+
+    $('paymentMessage').textContent =
+      'Pagamento pendente registrado com sucesso.';
+
+    await loadPayments();
+
+  }catch(error){
+
+    console.error(error);
+
+    $('paymentMessage').textContent =
+      'Erro ao registrar: ' + error.message;
+
+  }finally{
+
+    botao.disabled = false;
+
+  }
+
+}
+
+
+// Confirmar pagamento e renovar assinatura
+async function confirmPayment(paymentId){
+
+  const confirmar = window.confirm(
+    'Confirma que o PIX foi realmente recebido? ' +
+    'A assinatura será renovada por mais um mês.'
+  );
+
+  if(!confirmar) return;
+
+  $('paymentMessage').textContent =
+    'Confirmando pagamento e renovando assinatura...';
+
+  try{
+
+    const {data,error} = await sb.rpc(
+      'confirmar_pagamento_saas',
+      {
+        p_pagamento_id: paymentId
+      }
+    );
+
+    if(error) throw error;
+
+    if(!data || data.sucesso !== true){
+      throw new Error(
+        data?.mensagem || 'Não foi possível confirmar o pagamento.'
+      );
+    }
+
+    $('paymentMessage').textContent =
+      'Pagamento confirmado! Assinatura renovada com sucesso.';
+
+    await Promise.all([
+      loadPayments(),
+      loadSubscriptions(),
+      loadDashboard()
+    ]);
+
+  }catch(error){
+
+    console.error(error);
+
+    $('paymentMessage').textContent =
+      'Erro na confirmação: ' + error.message;
+
+  }
+
+}
+
+
+// Eventos do financeiro
+
+$('paymentCompany').addEventListener(
+  'change',
+  preencherAssinaturasPagamento
+);
+
+$('registerPayment').addEventListener(
+  'click',
+  registerPayment
+);
+
+$('refreshPayments').addEventListener(
+  'click',
+  loadPayments
+);
+
+$('paymentsTable').addEventListener('click',function(e){
+
+  const botao = e.target.closest('[data-confirm-payment]');
+
+  if(!botao) return;
+
+  confirmPayment(botao.dataset.confirmPayment);
+
+});
+
 // VERIFICAR AUTORIZAÇÃO ADMINISTRATIVA
   // ABRIR DETALHES DA EMPRESA
 
@@ -994,8 +1369,12 @@ async function enterAdmin(){
   $('dashboard').classList.remove('hidden');
 
   await loadDashboard();
-  await loadCompanies();
-  await loadSubscriptions();
+await loadCompanies();
+await loadSubscriptions();
+
+preencherEmpresasPagamento();
+
+await loadPayments();
 }
 
 // LOGIN
