@@ -394,37 +394,37 @@ td{color:#e0e7f0}
 
   <div id="paymentMessage" class="message"></div>
 
-  <h3 style="color:#e9b949;margin-top:35px">
+ <h3 style="color:#e9b949;margin-top:35px">
     Histórico de pagamentos
-  </h3>
+</h3>
 
-  <div class="table-wrap">
+<!-- FILTROS DO FINANCEIRO -->
+<div class="grid" style="margin:15px 0;">
 
-    <table>
-      <thead>
-        <tr>
-          <th>Empresa</th>
-          <th>Valor</th>
-          <th>Forma</th>
-          <th>Status</th>
-          <th>Data</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
+  <div class="card">
+    <label>Empresa</label>
+    <select id="filterPaymentCompany">
+      <option value="">Todas as empresas</option>
+    </select>
+  </div>
 
-      <tbody id="paymentsTable">
-        <tr>
-          <td colspan="6" class="empty">
-            Carregando pagamentos...
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="card">
+    <label>Status</label>
+    <select id="filterPaymentStatus">
+      <option value="">Todos</option>
+      <option value="pendente">Pendente</option>
+      <option value="confirmado">Confirmado</option>
+      <option value="recusado">Recusado</option>
+      <option value="estornado">Estornado</option>
+    </select>
+  </div>
 
+  <div class="card">
+    <label>Mês</label>
+    <input type="month" id="filterPaymentMonth">
   </div>
 
 </div>
-
 <!-- FIM DO MÓDULO FINANCEIRO -->
 
 <!-- JANELA DE DETALHES DA EMPRESA -->
@@ -469,6 +469,7 @@ const $ = id => document.getElementById(id);
 let empresasCarregadas = [];
 let assinaturasCarregadas = [];
 let planosCarregados = [];
+let pagamentosCarregados = [];
 
 function showMessage(message){
   $('loginMessage').textContent = message;
@@ -757,9 +758,25 @@ function preencherEmpresasPagamento(){
 
   });
 
+  // Preencher filtro de empresas
+  const filtroEmpresa = $('filterPaymentCompany');
+
+  filtroEmpresa.innerHTML =
+    '<option value="">Todas as empresas</option>';
+
+  empresasCarregadas.forEach(empresa => {
+
+    const option = document.createElement('option');
+
+    option.value = empresa.id;
+    option.textContent = empresa.nome_fantasia || 'Sem nome';
+
+    filtroEmpresa.appendChild(option);
+
+  });
+
   preencherAssinaturasPagamento();
 }
-
 
 // Preencher assinaturas conforme empresa escolhida
 function preencherAssinaturasPagamento(){
@@ -865,7 +882,8 @@ async function loadPayments(){
     return;
   }
 
-  renderPayments(data || []);
+  pagamentosCarregados = data || [];
+  renderPayments(pagamentosCarregados);
 
 }
 
@@ -877,11 +895,14 @@ function renderPayments(pagamentos){
     empresasCarregadas.map(e => [e.id,e])
   );
 
-  const recebidos = pagamentos
-    .filter(p => p.status === 'confirmado');
+  // Indicadores calculados com todos os pagamentos
+  const recebidos = pagamentos.filter(
+    p => p.status === 'confirmado'
+  );
 
-  const pendentes = pagamentos
-    .filter(p => p.status === 'pendente');
+  const pendentes = pagamentos.filter(
+    p => p.status === 'pendente'
+  );
 
   const totalRecebido = recebidos.reduce(
     (total,p) => total + Number(p.valor),0
@@ -893,12 +914,52 @@ function renderPayments(pagamentos){
   $('totalPending').textContent =
     pendentes.length;
 
-  if(pagamentos.length === 0){
+  // Aplicar filtros
+  const empresaFiltro =
+    $('filterPaymentCompany').value;
+
+  const statusFiltro =
+    $('filterPaymentStatus').value;
+
+  const mesFiltro =
+    $('filterPaymentMonth').value;
+
+  let filtrados = pagamentos.filter(p => {
+
+    if(empresaFiltro && p.empresa_id !== empresaFiltro){
+      return false;
+    }
+
+    if(statusFiltro && p.status !== statusFiltro){
+      return false;
+    }
+
+    if(mesFiltro){
+
+      const dataPagamento = new Date(
+        p.data_pagamento || p.created_at
+      );
+
+      const anoMes =
+        dataPagamento.getFullYear() + '-' +
+        String(dataPagamento.getMonth()+1).padStart(2,'0');
+
+      if(anoMes !== mesFiltro){
+        return false;
+      }
+    }
+
+    return true;
+
+  });
+
+  // Histórico vazio
+  if(filtrados.length === 0){
 
     $('paymentsTable').innerHTML = `
       <tr>
         <td colspan="6" class="empty">
-          Nenhum pagamento registrado.
+          Nenhum pagamento encontrado para os filtros selecionados.
         </td>
       </tr>
     `;
@@ -906,8 +967,9 @@ function renderPayments(pagamentos){
     return;
   }
 
+  // Montar histórico
   $('paymentsTable').innerHTML =
-    pagamentos.map(p => {
+    filtrados.map(p => {
 
       const empresa = empresasPorId.get(p.empresa_id);
 
@@ -1098,7 +1160,22 @@ $('refreshPayments').addEventListener(
   'click',
   loadPayments
 );
+  
+// Eventos dos filtros financeiros
+$('filterPaymentCompany').addEventListener(
+  'change',
+  () => renderPayments(pagamentosCarregados)
+);
 
+$('filterPaymentStatus').addEventListener(
+  'change',
+  () => renderPayments(pagamentosCarregados)
+);
+
+$('filterPaymentMonth').addEventListener(
+  'change',
+  () => renderPayments(pagamentosCarregados)
+);
 $('paymentsTable').addEventListener('click',function(e){
 
   const botao = e.target.closest('[data-confirm-payment]');
