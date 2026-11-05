@@ -1080,6 +1080,34 @@ async function registerPayment(){
       'Não é possível registrar pagamento para assinatura cancelada.';
     return;
   }
+  
+const plano = planosCarregados.find(
+  p => p.id === assinatura.plano_saas_id
+);
+
+if(!plano){
+  $('paymentMessage').textContent =
+    'Não foi possível identificar o plano da assinatura.';
+  return;
+}
+
+const valorPlano = Number(plano.valor_mensal);
+
+if(!Number.isFinite(valorPlano) || valorPlano <= 0){
+  $('paymentMessage').textContent =
+    'O plano não possui um valor mensal válido.';
+  return;
+}
+
+if(Number(valor.toFixed(2)) !== Number(valorPlano.toFixed(2))){
+
+  $('paymentAmount').value = valorPlano.toFixed(2);
+
+  $('paymentMessage').textContent =
+    'O valor foi atualizado para a mensalidade vigente. Clique novamente para registrar.';
+
+  return;
+}
 
   const botao = $('registerPayment');
 
@@ -1124,7 +1152,7 @@ async function registerPayment(){
   }
 
 }
-
+  
 
 // Confirmar pagamento e renovar assinatura
 async function confirmPayment(paymentId){
