@@ -803,6 +803,7 @@ function preencherEmpresasPagamento(){
 }
 
 // Preencher assinaturas conforme empresa escolhida
+
 function preencherAssinaturasPagamento(){
 
   const empresaId = $('paymentCompany').value;
@@ -830,6 +831,10 @@ function preencherAssinaturasPagamento(){
 
       option.value = assinatura.id;
 
+      // Guardar o preço vigente do plano
+      option.dataset.valorMensal =
+        plano?.valor_mensal || '';
+
       option.textContent =
         (plano?.nome || 'Plano') +
         ' - ' + (assinatura.status || '');
@@ -837,6 +842,10 @@ function preencherAssinaturasPagamento(){
       select.appendChild(option);
 
     });
+
+  // Limpar valor ao trocar de empresa
+  $('paymentAmount').value = '';
+
 }
 
 
@@ -1173,6 +1182,21 @@ async function confirmPayment(paymentId){
 $('paymentCompany').addEventListener(
   'change',
   preencherAssinaturasPagamento
+);
+
+$('paymentSubscription').addEventListener(
+  'change',
+  function(){
+
+    const select = $('paymentSubscription');
+
+    const opcao = select.options[select.selectedIndex];
+
+    const valor = opcao.dataset.valorMensal;
+
+    $('paymentAmount').value = valor || '';
+
+  }
 );
 
 $('registerPayment').addEventListener(
