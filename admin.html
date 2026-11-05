@@ -294,6 +294,47 @@ td{color:#e0e7f0}
 
 </div>
 
+<!-- MÓDULO DE ASSINATURAS -->
+
+<div class="section">
+
+  <div class="section-header">
+    <h2>Assinaturas</h2>
+    <button id="refreshSubscriptions">Atualizar assinaturas</button>
+  </div>
+
+  <input
+    type="text"
+    id="subscriptionSearch"
+    class="search"
+    placeholder="Pesquisar por empresa..."
+  >
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Plano</th>
+          <th>Status</th>
+          <th>Início do teste</th>
+          <th>Fim do teste</th>
+          <th>Vencimento do ciclo</th>
+          <th>Valor mensal</th>
+        </tr>
+      </thead>
+      <tbody id="subscriptionsTable">
+        <tr>
+          <td colspan="7" class="empty">Carregando assinaturas...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="subscriptionsMessage" class="message"></div>
+
+</div>
+
 <!-- JANELA DE DETALHES DA EMPRESA -->
 
 <div id="companyModal" class="modal hidden">
@@ -334,6 +375,8 @@ const sb = window.supabase.createClient(
 const $ = id => document.getElementById(id);
 
 let empresasCarregadas = [];
+let assinaturasCarregadas = [];
+let planosCarregados = [];
 
 function showMessage(message){
   $('loginMessage').textContent = message;
@@ -496,6 +539,107 @@ function renderCompanies(){
       `;
 
     }).join('');
+}
+
+// MÓDULO DE ASSINATURAS - CONSULTA
+
+async function loadSubscriptions(){
+
+  $('subscriptionsTable').innerHTML = `
+    <tr>
+      <td colspan="7" class="empty">Carregando assinaturas...</td>
+    </tr>
+  `;
+
+  $('subscriptionsMessage').textContent = '';
+
+  const [assinaturasResult, planosResult] = await Promise.all([
+    sb.from('assinaturas')
+      .select('id,empresa_id,plano_saas_id,status,inicio_teste,fim_teste,inicio_ciclo,fim_ciclo,created_at')
+      .order('created_at',{ascending:false}),
+
+    sb.from('planos_saas')
+      .select('id,nome,valor_mensal')
+  ]);
+
+  if(assinaturasResult.error || planosResult.error){
+
+    const erro = assinaturasResult.error || planosResult.error;
+
+    $('subscriptionsTable').innerHTML = `
+      <tr>
+        <td colspan="7" class="empty">
+          Não foi possível carregar as assinaturas.
+        </td>
+      </tr>
+    `;
+
+    $('subscriptionsMessage').textContent = 'Erro: ' + erro.message;
+    console.error(erro);
+    return;
+  }
+
+  assinaturasCarregadas = assinaturasResult.data || [];
+  planosCarregados = planosResult.data || [];
+
+  renderSubscriptions();
+}
+
+function renderSubscriptions(){
+
+  const pesquisa = $('subscriptionSearch').value.trim().toLowerCase();
+
+  const empresasPorId = new Map(
+    empresasCarregadas.map(empresa => [empresa.id, empresa])
+  );
+
+  const planosPorId = new Map(
+    planosCarregados.map(plano => [plano.id, plano])
+  );
+
+  const filtradas = assinaturasCarregadas.filter(assinatura => {
+    const empresa = empresasPorId.get(assinatura.empresa_id);
+    return (empresa?.nome_fantasia || '').toLowerCase().includes(pesquisa);
+  });
+
+  if(filtradas.length === 0){
+    $('subscriptionsTable').innerHTML = `
+      <tr>
+        <td colspan="7" class="empty">Nenhuma assinatura encontrada.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  function dataBR(valor){
+    if(!valor) return '-';
+    return new Date(valor).toLocaleDateString('pt-BR');
+  }
+
+  function dinheiro(valor){
+    if(valor === null || valor === undefined) return '-';
+    return Number(valor).toLocaleString('pt-BR',{
+      style:'currency',
+      currency:'BRL'
+    });
+  }
+
+  $('subscriptionsTable').innerHTML = filtradas.map(assinatura => {
+    const empresa = empresasPorId.get(assinatura.empresa_id);
+    const plano = planosPorId.get(assinatura.plano_saas_id);
+
+    return `
+      <tr>
+        <td>${escapeHTML(empresa?.nome_fantasia || 'Empresa não encontrada')}</td>
+        <td>${escapeHTML(plano?.nome || 'Plano não identificado')}</td>
+        <td>${escapeHTML(assinatura.status || '-')}</td>
+        <td>${dataBR(assinatura.inicio_teste)}</td>
+        <td>${dataBR(assinatura.fim_teste)}</td>
+        <td>${dataBR(assinatura.fim_ciclo)}</td>
+        <td>${dinheiro(plano?.valor_mensal)}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // VERIFICAR AUTORIZAÇÃO ADMINISTRATIVA
@@ -759,6 +903,7 @@ async function enterAdmin(){
 
   await loadDashboard();
   await loadCompanies();
+  await loadSubscriptions();
 }
 
 // LOGIN
@@ -803,7 +948,15 @@ $('companySearch').addEventListener('input',renderCompanies);
 
 // ATUALIZAR LISTA
 
-$('refreshCompanies').addEventListener('click',loadCompanies);
+$('refreshCompanies').addEventListener('click',async function(){
+  await loadCompanies();
+  await loadSubscriptions();
+});
+
+// PESQUISA E ATUALIZAÇÃO DE ASSINATURAS
+
+$('subscriptionSearch').addEventListener('input',renderSubscriptions);
+$('refreshSubscriptions').addEventListener('click',loadSubscriptions);
 
 // SAIR
 
@@ -816,8 +969,11 @@ $('logoutButton').addEventListener('click',async function(){
 
   $('password').value = '';
   $('companySearch').value = '';
+  $('subscriptionSearch').value = '';
 
   empresasCarregadas = [];
+  assinaturasCarregadas = [];
+  planosCarregados = [];
 
   showMessage('Você saiu do painel.');
 
