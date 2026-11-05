@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Online | Administração SaaS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#101827;
+  color:#fff;
+}
+.container{
+  width:min(1100px,94%);
+  margin:40px auto;
+}
+.login{
+  max-width:400px;
+  margin:100px auto;
+  background:#1c293b;
+  padding:30px;
+  border-radius:15px;
+}
+h1{margin-top:0;color:#e9b949}
+input{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border:1px solid #40516a;
+  border-radius:8px;
+  background:#101827;
+  color:white;
+}
+button{
+  padding:12px 18px;
+  border:0;
+  border-radius:8px;
+  background:#d9a52e;
+  color:#172235;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:hover{opacity:.9}
+.hidden{display:none!important}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:15px;
+  margin-bottom:30px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:18px;
+}
+.card{
+  background:#1c293b;
+  padding:25px;
+  border-radius:13px;
+  border:1px solid #304057;
+}
+.card small{color:#aebbd0}
+.number{
+  font-size:34px;
+  font-weight:bold;
+  margin-top:12px;
+  color:#e9b949;
+}
+.message{
+  margin-top:15px;
+  color:#ffb4a9;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="loginScreen" class="login">
+  <h1>STAR ONLINE</h1>
+  <p>Administração SaaS</p>
+
+  <form id="loginForm">
+    <input id="email" type="email"
+      placeholder="E-mail" required>
+
+    <input id="password" type="password"
+      placeholder="Senha" required>
+
+    <button id="loginButton" type="submit">
+      Entrar no painel
+    </button>
+  </form>
+
+  <div id="loginMessage" class="message"></div>
+</div>
+
+<div id="dashboard" class="container hidden">
+
+  <div class="header">
+    <div>
+      <h1>STAR ONLINE SaaS</h1>
+      <small>Painel administrativo do proprietário</small>
+    </div>
+
+    <button id="logoutButton">Sair</button>
+  </div>
+
+  <h2>Visão geral</h2>
+
+  <div class="grid">
+
+    <div class="card">
+      <small>Empresas cadastradas</small>
+      <div id="totalEmpresas" class="number">--</div>
+    </div>
+
+    <div class="card">
+      <small>Assinaturas</small>
+      <div id="totalAssinaturas" class="number">--</div>
+    </div>
+
+    <div class="card">
+      <small>Membros cadastrados</small>
+      <div id="totalMembros" class="number">--</div>
+    </div>
+
+    <div class="card">
+      <small>Planos SaaS</small>
+      <div id="totalPlanos" class="number">--</div>
+    </div>
+
+  </div>
+
+  <div id="dashboardMessage" class="message"></div>
+
+</div>
+
+<script>
+// CONFIGURAÇÃO SUPABASE
+const SUPABASE_URL =
+'https://hwvrxzgwrimioextcqtl.supabase.co';
+
+// Cole aqui a mesma chave PUBLICÁVEL
+// utilizada no index.html.
+// Nunca utilize a service_role key.
+const SUPABASE_KEY = 'sb_publishable_ZE2MMH6V7N0Bc2oaMNZ7Eg_dFAd6FE7';
+
+const sb = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const $ = id => document.getElementById(id);
+
+function showMessage(message){
+  $('loginMessage').textContent = message;
+}
+
+async function loadDashboard(){
+
+  $('dashboardMessage').textContent =
+    'Carregando informações...';
+
+  const consultas = await Promise.all([
+    sb.from('empresas').select('id', {
+      count:'exact', head:true
+    }),
+
+    sb.from('assinaturas').select('id', {
+      count:'exact', head:true
+    }),
+
+    sb.from('membros_empresa').select('id', {
+      count:'exact', head:true
+    }),
+
+    sb.from('planos_saas').select('id', {
+      count:'exact', head:true
+    })
+  ]);
+
+  const erro = consultas.find(item => item.error);
+
+  if(erro){
+    $('dashboardMessage').textContent =
+      'Erro ao carregar dados: ' + erro.error.message;
+    return;
+  }
+
+  $('totalEmpresas').textContent =
+    consultas[0].count ?? 0;
+
+  $('totalAssinaturas').textContent =
+    consultas[1].count ?? 0;
+
+  $('totalMembros').textContent =
+    consultas[2].count ?? 0;
+
+  $('totalPlanos').textContent =
+    consultas[3].count ?? 0;
+
+  $('dashboardMessage').textContent =
+    'Informações atualizadas com sucesso.';
+}
+
+async function enterAdmin(){
+
+  const {data,error} =
+    await sb.rpc('eh_admin_saas');
+
+  if(error){
+    showMessage(
+      'Não foi possível verificar a autorização administrativa.'
+    );
+    console.error(error);
+    return;
+  }
+
+  if(data !== true){
+    showMessage(
+      'Acesso não autorizado. Esta área é exclusiva do proprietário.'
+    );
+    return;
+  }
+
+  $('loginScreen').classList.add('hidden');
+  $('dashboard').classList.remove('hidden');
+
+  await loadDashboard();
+}
+
+$('loginForm').addEventListener('submit',async function(e){
+
+  e.preventDefault();
+
+  $('loginButton').disabled = true;
+  showMessage('Verificando acesso...');
+
+  try{
+
+    const {data,error} =
+      await sb.auth.signInWithPassword({
+        email:$('email').value,
+        password:$('password').value
+      });
+
+    if(error){
+      showMessage('Falha no login: ' + error.message);
+      return;
+    }
+
+    await enterAdmin();
+
+  }catch(error){
+
+    showMessage('Erro inesperado: ' + error.message);
+
+  }finally{
+
+    $('loginButton').disabled = false;
+
+  }
+
+});
+
+$('logoutButton').addEventListener('click',async function(){
+
+  await sb.auth.signOut();
+
+  $('dashboard').classList.add('hidden');
+  $('loginScreen').classList.remove('hidden');
+
+  $('password').value = '';
+  showMessage('Você saiu do painel.');
+
+});
+
+async function init(){
+
+  const {data,error} = await sb.auth.getSession();
+
+  if(error){
+    showMessage('Erro ao verificar sessão.');
+    return;
+  }
+
+  if(data.session){
+    await enterAdmin();
+  }
+
+}
+
+init();
+</script>
+
+</body>
+</html>
