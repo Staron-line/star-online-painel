@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#101827">
 <title>Star Online | Painel Administrativo</title>
+<script>
+try {
+  document.documentElement.dataset.theme =
+    localStorage.getItem('starOnlineTheme') || 'dark';
+} catch (e) {
+  document.documentElement.dataset.theme = 'dark';
+}
+</script>
 <style>
 :root{--bg:#f3f6fb;--panel:#fff;--ink:#172235;--muted:#718096;--line:#e5eaf1;--nav:#101827;--blue:#2864dc;--gold:#d8a83e;--green:#159b69;--red:#d94b55;--orange:#d98b25;--shadow:0 8px 28px #1722350b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
@@ -39,6 +47,58 @@ nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;
 .toast{position:fixed;right:20px;bottom:20px;background:#172235;color:white;padding:12px 17px;border-radius:10px;box-shadow:var(--shadow);z-index:50;display:none}
 @media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.two-col{grid-template-columns:1fr}}
 @media(max-width:720px){.app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:15;top:0;bottom:0;left:-260px;width:245px;transition:left .2s}.sidebar.open{left:0}.mobile-menu{display:block}.topbar{padding:0 15px;height:62px}.topbar h1{font-size:15px}.content{padding:18px 13px}.page-head{align-items:flex-start;flex-direction:column}.page-head .btn{width:100%;justify-content:center}.stats{gap:10px}.card{padding:14px}.stat-value{font-size:23px}.form-grid,.settings-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.pill{display:none}}
+
+
+/* TEMA NOTURNO E ALTERNANCIA DE APARENCIA */
+:root[data-theme="dark"]{
+ --bg:#0b1220;--panel:#151f30;--ink:#e8eef8;--muted:#9aa9bd;
+ --line:#2b3a50;--nav:#080f1c;--blue:#3978ed;--gold:#e9b949;
+ --green:#27b981;--red:#ef6972;--orange:#e5a343;
+ --shadow:0 10px 30px #0005;
+ color-scheme:dark;
+}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+:root[data-theme="dark"] .topbar{background:var(--panel);border-color:var(--line);color:var(--ink)}
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .modal{background:var(--panel);border-color:var(--line);color:var(--ink)}
+:root[data-theme="dark"] th{color:#aebbd0;border-color:var(--line)}
+:root[data-theme="dark"] td{color:#dce5f2;border-color:#29384d}
+:root[data-theme="dark"] tr:last-child td{border-color:transparent}
+:root[data-theme="dark"] .btn-secondary,
+:root[data-theme="dark"] .icon-btn,
+:root[data-theme="dark"] .close,
+:root[data-theme="dark"] .mobile-menu{background:#26364d;color:#e5edf8}
+:root[data-theme="dark"] .btn-gold{background:#493b20;color:#f4d58d}
+:root[data-theme="dark"] .btn-danger{background:#48272d;color:#ffb7bd}
+:root[data-theme="dark"] .stat-icon{background:#263752;color:#c5d8ff}
+:root[data-theme="dark"] .badge{background:#29364a;color:#c1cddd}
+:root[data-theme="dark"] .badge.green{background:#153d32;color:#7be0b6}
+:root[data-theme="dark"] .badge.red{background:#48272d;color:#ffadb4}
+:root[data-theme="dark"] .badge.orange{background:#493820;color:#f2c77e}
+:root[data-theme="dark"] .badge.blue{background:#20385e;color:#a9c7ff}
+:root[data-theme="dark"] .field label{color:#bac7d9}
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .toolbar input,
+:root[data-theme="dark"] .toolbar select,
+:root[data-theme="dark"] #loginScreen input{
+ background:#0d1727!important;color:#e8eef8!important;border-color:#35465f!important;
+}
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder{color:#8292a9}
+:root[data-theme="dark"] .notice{background:#3a301d;border-color:#65502a;color:#f0d49b}
+:root[data-theme="dark"] .quick-row{border-color:var(--line)}
+:root[data-theme="dark"] .modal-backdrop{background:#020711d9}
+:root[data-theme="dark"] #loginScreen > div{background:#151f30!important;color:#e8eef8!important;border:1px solid #2b3a50}
+:root[data-theme="dark"] #loginScreen p{color:#aab8cb!important}
+:root[data-theme="dark"] #loginScreen label{color:#c4d0e0!important}
+:root[data-theme="dark"] #loginScreen #registerArea > div{color:#e8eef8!important}
+.theme-toggle{border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:var(--bg);color:var(--ink);font-weight:700;white-space:nowrap}
+.theme-toggle:hover{filter:brightness(1.08)}
+@media(max-width:720px){.theme-toggle{padding:7px 9px;font-size:12px}.top-right{gap:7px}}
+
 </style>
 </head>
 <body>
@@ -61,7 +121,7 @@ nav{display:grid;gap:5px}.nav-btn{border:0;background:transparent;color:#bdc9d9;
  <div class="side-note">Dados sincronizados na nuvem</div>
 </aside>
 <main class="main">
- <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="mobile-menu" id="menuToggle">☰</button><h1 id="topTitle">Dashboard</h1></div><div class="top-right"><span class="pill">● Ambiente local de demonstração</span><strong>Administrador</strong></div></header>
+ <header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="mobile-menu" id="menuToggle">☰</button><h1 id="topTitle">Dashboard</h1></div><div class="top-right"><span class="pill">● Ambiente local de demonstração</span><strong>Administrador</strong><button type="button" class="theme-toggle" id="themeToggle" aria-pressed="true">☀ Modo claro</button></div></header>
  <div class="content">
   <section class="page active" id="page-dashboard">
    <div class="page-head"><div><h2>Visão geral</h2><p>Acompanhe clientes, mensalidades e recebimentos.</p></div><button class="btn btn-primary" onclick="openClientModal()">＋ Novo cliente</button></div>
@@ -191,6 +251,29 @@ const SUPABASE_URL='https://hwvrxzgwrimioextcqtl.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ZE2MMH6V7N0Bc2oaMNZ7Eg_dFAd6FE7';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const $=id=>document.getElementById(id);
+
+// TEMA VISUAL: inicia em modo noturno e guarda a escolha neste navegador.
+function applyTheme(theme){
+ const selected=theme==='light'?'light':'dark';
+ document.documentElement.dataset.theme=selected;
+ try{localStorage.setItem('starOnlineTheme',selected)}catch(e){console.warn('Não foi possível salvar a preferência visual.',e)}
+ updateThemeButton();
+}
+function updateThemeButton(){
+ const button=$('themeToggle');
+ if(!button)return;
+ const dark=document.documentElement.dataset.theme!=='light';
+ button.textContent=dark?'☀ Modo claro':'☾ Modo noturno';
+ button.setAttribute('aria-pressed',dark?'true':'false');
+ button.title=dark?'Mudar para modo claro':'Mudar para modo noturno';
+}
+document.addEventListener('click',function(event){
+ const button=event.target.closest('#themeToggle');
+ if(!button)return;
+ applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+});
+
+updateThemeButton();
 const todayISO=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
 const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const fmtDate=s=>s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):'—';
@@ -362,7 +445,8 @@ async function enterPanel(session){
   document.querySelector('.app').style.display='grid';
   $('loginError').textContent='';
   $('topTitle').textContent='Dashboard';
-  document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';
+  document.querySelector('.top-right').innerHTML='<span class="pill">● Sincronizado na nuvem</span><strong>Administrador</strong><button type="button" class="theme-toggle" id="themeToggle" aria-pressed="true">☀ Modo claro</button><button class="btn btn-secondary btn-small" id="logoutBtn">Sair</button>';
+  updateThemeButton();
   $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
   await loadCloud();
   const settings=JSON.parse(localStorage.getItem('starOnlineSettings')||'{}');
